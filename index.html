@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset=utf-8>
+		<title>My first three.js app</title>
+		<style>
+			body { margin: 0; }
+			canvas { width: 100%; height: 100% }
+		</style>
+	</head>
+	<body>
+		<script src="js/three.js"></script>
+		<script src="js/controls/DragControls.js"></script>
+		<script src="js/controls/OrbitControls.js"></script>
+		<script src="js/controls/TransformControls.js"></script>
+		<script type="text/javascript" src="js/dat.gui.min.js"></script>
+		<script type="x-shader/x-vertex" id="vertexShader">
+
+			mat3 transpose(mat3 m)
+			{
+			  return mat3(m[0][0], m[1][0], m[2][0],
+			              m[0][1], m[1][1], m[2][1],
+			              m[0][2], m[1][2], m[2][2]);
+			}
+
+			uniform mat3 convMatXYZ;
+			uniform vec2 whitePoint;
+			varying vec3 vColorXYZ;
+			void main() {
+
+				vec3 pos = position;
+				vec3 rgb = (pos + 0.5); // box is centered at 0,0,0
+ 
+				vec3 xyz = convMatXYZ * rgb;
+				float sum = xyz.x + xyz.y + xyz.z;
+				vec3 xyY = vec3(0, 0, 0);
+				if(sum != 0.0)
+				{
+					xyY.x = xyz.x / sum;
+					xyY.y = xyz.y / sum;
+					xyY.z = xyz.y;
+				}
+				else
+				{
+					xyY.x = whitePoint.x;
+					xyY.y = whitePoint.y;
+					xyY.z = xyz.y;
+				}
+
+				vec4 mvPosition = modelViewMatrix * vec4( xyY, 1.0 );
+				gl_Position = projectionMatrix * mvPosition;
+
+				vColorXYZ = xyz;
+			}
+
+		</script>
+
+		<script type="x-shader/x-fragment" id="fragmentShader">
+			mat3 transpose(mat3 m)
+			{
+			  return mat3(m[0][0], m[1][0], m[2][0],
+			              m[0][1], m[1][1], m[2][1],
+			              m[0][2], m[1][2], m[2][2]);
+			}
+
+			varying vec3 vColorXYZ;
+			uniform float opacity;
+			void main() {
+				// need to convert to srgb for other color space
+
+				mat3 XYZ_to_sRGB = mat3( 3.2404542, -1.5371385, -0.4985314,
+										-0.9692660,  1.8760108,  0.0415560,
+										 0.0556434, -0.2040259,  1.0572252);
+
+				XYZ_to_sRGB = transpose(XYZ_to_sRGB);
+
+				vec3 rgb = XYZ_to_sRGB * vColorXYZ;
+				gl_FragColor = vec4( rgb, opacity );
+			}
+		</script>
+		<script>
+			
+
+			var aspect = window.innerWidth / window.innerHeight;
+			var scene = new THREE.Scene();
+			var camera = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
+			var frustumSize = 2;
+			//var camera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
+
+
+			var renderer = new THREE.WebGLRenderer();
+			renderer.setSize( window.innerWidth, window.innerHeight );
+			document.body.appendChild( renderer.domElement );
+
+			// Rec 2020
+			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
+
+			rec2020toXYZ = new THREE.Matrix3();
+			rec2020toXYZ.set(	0.6361413085, 0.1450031025, 0.1693261477,
+								0.2624181923, 0.6784513776,	0.05913043003,
+								0.00004951285658, 0.02831649779, 1.060462726);
+
+			rec2020White = new THREE.Vector2(0.3127, 0.3290);
+			var material2020 = new THREE.ShaderMaterial( {
+			uniforms: {
+				convMatXYZ: { value: rec2020toXYZ },
+				whitePoint: {value: rec2020White },	
+				opacity: {value: 0.3}
+
+			},
+			vertexShader: document.getElementById( 'vertexShader' ).textContent,
+			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+			} );
+
+			material2020.transparent = true;
+			material2020.opacity = 0.5;
+
+			var cube2020 = new THREE.Mesh( boxGeo, material2020 );
+			cube2020.renderOrder = 1;
+			scene.add( cube2020 );
+
+
+			// Rec 709
+			rec709toXYZ = new THREE.Matrix3();
+			rec709toXYZ.set(	0.4124564,	0.3575761,	0.1804375,
+					 			0.2126729,	0.7151522,	0.0721750,
+					 			0.0193339,	0.1191920,	0.9503041,);
+
+			rec709White = new THREE.Vector2(0.3127, 0.3290);
+			var material709 = new THREE.ShaderMaterial( {
+
+
+			uniforms: {
+				convMatXYZ: { value: rec709toXYZ },
+				whitePoint: {value: rec709White },
+				opacity: {value: 1.0}
+
+			},
+
+			vertexShader: document.getElementById( 'vertexShader' ).textContent,
+
+			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+
+			} );
+
+			material709.transparent = true;
+			material709.opacity = 1.0;
+
+			var cube709 = new THREE.Mesh( boxGeo, material709 );
+			scene.add( cube709 );
+			cube709.renderOrder = 0;
+
+
+			var axesHelper = new THREE.AxesHelper( 1 );
+			scene.add( axesHelper );
+
+			var size = 10;
+			var divisions = 10;
+
+			camera.position.z = 5;
+
+
+			var controls = new THREE.OrbitControls( camera, renderer.domElement );
+			controls.damping = 0.2;
+
+			var pointsGeom = new THREE.Geometry();
+
+			var p = new THREE.Vector3();
+			pointsGeom.vertices.push( p );
+
+			var pointsMaterial = new THREE.PointsMaterial( { color: 0x888888, size:0.1 } );
+			var point = new THREE.Points(pointsGeom, pointsMaterial);
+			scene.add( point );
+
+
+			function rec709_to_xyY(rec709Color)
+			{
+				var XYZ = rec709Color.applyMatrix3(rec709toXYZ);
+				return XYZ_to_xyY(XYZ, rec709White);
+			}
+
+			function rec2020_to_xyY(rec2020Color)
+			{
+				var XYZ = rec2020Color.applyMatrix3(rec2020toXYZ);
+				return XYZ_to_xyY(XYZ, rec2020White);
+			}
+		
+			function XYZ_to_xyY(XYZColor, whitePoint)
+			{
+				var XYZ = XYZColor;
+				var sum = XYZ.x + XYZ.y + XYZ.z;
+				var xyY = new THREE.Vector3(0, 0, 0);
+				if(sum != 0.0)
+				{
+					xyY.x = XYZ.x / sum;
+					xyY.y = XYZ.y / sum;
+					xyY.z = XYZ.y;
+				}
+				else
+				{
+					xyY.x = whitePoint.x;
+					xyY.y = whitePoint.y;
+					xyY.z = XYZ.y;
+				}
+				return xyY;
+			}
+
+			var params = {r:0, g:0, b:0, as2020:false, show2020:true, show709:true};
+			function updatePoint()
+			{
+				var f = params.as2020 ? rec2020_to_xyY : rec709_to_xyY;
+				var v = f(new THREE.Vector3(params.r, params.g, params.b));
+				point.position.copy(v);
+			}
+
+			updatePoint();
+
+			var gui = new dat.GUI();
+
+
+			gui.add(params, 'r', 0, 2, 0.01).onChange(updatePoint);
+			gui.add(params, 'g', 0, 2, 0.01).onChange(updatePoint);
+			gui.add(params, 'b', 0, 2, 0.01).onChange(updatePoint);
+			gui.add(params, 'as2020').onChange(updatePoint);
+
+			gui.add(params, 'show2020').onChange(function(value){
+				cube2020.visible = value;
+			});
+			gui.add(params, 'show709').onChange(function(value){
+				cube709.visible = value;
+			});
+
+			function render() {
+				
+				requestAnimationFrame( render );
+				renderer.render( scene, camera );
+
+			}
+			render();
+
+			window.addEventListener( 'resize', onWindowResize, false );
+
+			function onWindowResize(){
+
+			    camera.aspect = window.innerWidth / window.innerHeight;
+			    camera.updateProjectionMatrix();
+
+			    renderer.setSize( window.innerWidth, window.innerHeight );
+
+			}
+		</script>
+	</body>
+</html>
