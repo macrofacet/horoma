@@ -83,10 +83,15 @@
 
 			var aspect = window.innerWidth / window.innerHeight;
 			var scene = new THREE.Scene();
-			var camera = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
-			var frustumSize = 2;
-			//var camera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
+			var perspCamera = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
 
+			perspCamera.position.z = 5;
+
+			var frustumSize = 2;
+			var orthoCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
+
+			orthoCamera.position.z = 5;
+			var camera = perspCamera;
 
 			var renderer = new THREE.WebGLRenderer();
 			renderer.setSize( window.innerWidth, window.innerHeight );
@@ -157,10 +162,9 @@
 			var size = 10;
 			var divisions = 10;
 
-			camera.position.z = 5;
 
 
-			var controls = new THREE.OrbitControls( camera, renderer.domElement );
+			var controls = new THREE.OrbitControls( perspCamera, renderer.domElement );
 			controls.damping = 0.2;
 
 			var pointsGeom = new THREE.Geometry();
@@ -205,7 +209,8 @@
 				return xyY;
 			}
 
-			var params = {r:0, g:0, b:0, as2020:false, show2020:true, show709:true};
+			var params = {r:0, g:0, b:0, as2020:false, show2020:true, show709:true, ortho:false};
+
 			function updatePoint()
 			{
 				var f = params.as2020 ? rec2020_to_xyY : rec709_to_xyY;
@@ -230,6 +235,10 @@
 				cube709.visible = value;
 			});
 
+			gui.add(params, 'ortho').onChange(function(value){
+				camera = value ? orthoCamera : perspCamera;
+			});
+
 			function render() {
 				
 				requestAnimationFrame( render );
@@ -242,8 +251,16 @@
 
 			function onWindowResize(){
 
-			    camera.aspect = window.innerWidth / window.innerHeight;
-			    camera.updateProjectionMatrix();
+				var aspect = window.innerWidth / window.innerHeight;
+			    perspCamera.aspect = aspect;
+			    perspCamera.updateProjectionMatrix();
+
+			    orthoCamera.left = frustumSize * aspect / - 2;
+			    orthoCamera.right = frustumSize * aspect / 2;
+			    orthoCamera.top = frustumSize / 2;
+			    orthoCamera.bottom = frustumSize / - 2;
+
+			    orthoCamera.updateProjectionMatrix();
 
 			    renderer.setSize( window.innerWidth, window.innerHeight );
 
