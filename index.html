@@ -402,11 +402,9 @@
 
 			var params = {xr:0.64, yr:0.33, xg:0.3, yg:0.6, xb:0.15, yb:0.06, xw:0.3127, yw:0.3290, 
 						scale:1, compression:0, 
-						r:0, g:0, b:0, 
-						intensity:0,
-						ar:0, ag:0, ab:0, 
 						saturation:1,
-						c:0,
+						steps:1,
+						div:10,
 						ortho:false};
 
 			function lerp(a, b, t)
@@ -489,15 +487,16 @@
 								si * wgt.x, 	si * wgt.y,		si * wgt.z + + s,)
 
 				const positions = [];
-				const steps = 20;
+				const steps = params.steps;
+				const div = params.div / 2;
 				for ( let r = 0; r <= steps; r ++ )
 				{
 					for ( let g = 0; g <= steps; g ++ )
 					{
 						for ( let b = 0; b <= steps; b ++ )
 						{
-							if(r == g && r == b) continue;
-							for ( let i = -10; i <= 10; i ++ )
+							//if(r == g && r == b) continue;
+							for ( let i = -div; i <= div; i ++ )
 							{
 								var ex = Math.pow(2, i);
 								var p = new THREE.Vector3(r/steps, g/steps, b/steps).multiplyScalar(ex);
@@ -542,22 +541,13 @@
 			gui.add(params, 'yw', 0, 1, 0.0001).onChange(updatePoint);
 
 			gui.add(params, 'scale', 0, 1, 0.0001).onChange(updatePoint);
-
 			
-			gui.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);
-
-			gui.add(params, 'r', 0, 1, 0.001).onChange(updatePoint);
-			gui.add(params, 'g', 0, 1, 0.001).onChange(updatePoint);
-			gui.add(params, 'b', 0, 1, 0.001).onChange(updatePoint);
-			gui.add(params, 'intensity', 0, 20, 0.001).onChange(updatePoint);
-			
+			gui.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);			
 			
 			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updatePoint);
-			gui.add(params, 'ar', 0, 1, 0.01);
-			gui.add(params, 'ag', 0, 1, 0.01);
-			gui.add(params, 'ab', 0, 1, 0.01);
 
-			gui.addColor(params, 'c');
+			gui.add(params, 'steps', 1, 20, 1).onChange(updatePoint);
+			gui.add(params, 'div', 1, 20, 1).onChange(updatePoint);
 			
 			
 			function render() {
