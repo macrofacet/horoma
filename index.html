@@ -293,7 +293,7 @@
 				return equation_curve(x, x_pivot, y_pivot, slope_pivot, toe_power, shoulder_power, scale);
 			}
 
-			function applyTonemap(rgb)
+			function applyTonemap(rgb, slope, toe_power, shoulder_power)
 			{
 				var xyz = rgb.applyMatrix3(sRGB_to_XYZ);
 				var ajustedRGB = xyz.applyMatrix3(XYZ_to_adjusted);
@@ -311,9 +311,9 @@
 				var logG = open_domain_to_normalized_log2(ajustedRGB.y, min_ev, max_ev);
 				var logB = open_domain_to_normalized_log2(ajustedRGB.z, min_ev, max_ev);
 
-				var outputR = equation_full_curve(logR, x_pivot, y_pivot, 2.5, 1.9, 3.1);
-				var outputG = equation_full_curve(logG, x_pivot, y_pivot, 2.5, 1.9, 3.1);
-				var outputB = equation_full_curve(logB, x_pivot, y_pivot, 2.5, 1.9, 3.1);
+				var outputR = equation_full_curve(logR, x_pivot, y_pivot, slope, toe_power, shoulder_power);
+				var outputG = equation_full_curve(logG, x_pivot, y_pivot, slope, toe_power, shoulder_power);
+				var outputB = equation_full_curve(logB, x_pivot, y_pivot, slope, toe_power, shoulder_power);
 
 				//ajustedRGB.x = Math.min(Math.max(ajustedRGB.x, 0), 1);
 				//ajustedRGB.y = Math.min(Math.max(ajustedRGB.y, 0), 1);
@@ -424,7 +424,7 @@
 				var ex = Math.pow(2, i);
 				var p = new THREE.Vector3(1, 0, 0).multiplyScalar(ex);
 
-				p = applyTonemap(p);
+				//p = applyTonemap(p);
 
 				positions.push( p.x, p.y, p.z );
 			}
@@ -471,6 +471,9 @@
 						steps:1,
 						start:-10,
 						range:20,
+						slope:2.5,
+						toe_power:1.9,
+						shoulder_power:3.1,
 						ortho:false};
 
 			function lerp(a, b, t)
@@ -569,7 +572,7 @@
 								var ex = Math.pow(2, i);
 								var p = new THREE.Vector3(r/steps, g/steps, b/steps).multiplyScalar(ex);
 
-								var tp = applyTonemap(p);
+								var tp = applyTonemap(p, params.slope, params.toe_power, params.shoulder_power);
 								tp = tp.applyMatrix3(SatMatrix);
 						
 								tp.x = Math.min(Math.max(tp.x, 0), 1);
@@ -617,6 +620,11 @@
 			gui.add(params, 'steps', 1, 20, 1).onChange(updatePoint);
 			gui.add(params, 'start', -20, 20, 1).onChange(updatePoint);
 			gui.add(params, 'range', 0, 20, 1).onChange(updatePoint);
+
+			
+			gui.add(params, 'slope', 0, 10, 0.01).onChange(updatePoint);
+			gui.add(params, 'toe_power', 0, 10, 0.01).onChange(updatePoint);
+			gui.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
 			
 			
 			function render() {
