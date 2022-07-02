@@ -256,7 +256,7 @@
 				return ajustedRGB;
 			}
 			
-			var aspect = (window.innerWidth * 0.4) / window.innerHeight;
+			var aspect = window.innerWidth / window.innerHeight;
 
 			var XYZscene = new THREE.Scene();
 			var perspCameraXYZ = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
@@ -275,12 +275,12 @@
 			perspCamera_xyY.position.z = 5;
 
 			var XYZrenderer = new THREE.WebGLRenderer();
-			XYZrenderer.setSize( window.innerWidth * 0.4, window.innerHeight );
-			document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
+			//XYZrenderer.setSize( window.innerWidth * 0.4, window.innerHeight );
+			//document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
 
 			
 			var xyYrenderer = new THREE.WebGLRenderer();
-			xyYrenderer.setSize( window.innerWidth * 0.4, window.innerHeight );
+			xyYrenderer.setSize( window.innerWidth, window.innerHeight );
 			document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
 
 			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
@@ -404,7 +404,8 @@
 						scale:1, compression:0, 
 						saturation:1,
 						steps:1,
-						div:10,
+						start:-10,
+						range:20,
 						ortho:false};
 
 			function lerp(a, b, t)
@@ -433,7 +434,7 @@
 				var xyG = new THREE.Vector2(params.xg, params.yg);
 				var xyB = new THREE.Vector2(params.xb, params.yb);
 				var xyW = new THREE.Vector2(params.xw, params.yw);
-
+				/*
 				var scale_factor = 1 / (1 - params.compression);
 				xyR.sub(xyW).multiplyScalar(scale_factor).add(xyW);
 				xyG.sub(xyW).multiplyScalar(scale_factor).add(xyW);
@@ -462,6 +463,7 @@
 				triangle.vertices[1] = XYZG;			
 				triangle.vertices[2] = XYZB;
 				triangle.verticesNeedUpdate = true;
+				*/
 
 				/*var scaled
 				var tonemappedRGB = applyTonemap(new THREE.Vector3(params.r, params.g, params.b).multiplyScalar(params.intensity), M);
@@ -488,7 +490,8 @@
 
 				const positions = [];
 				const steps = params.steps;
-				const div = params.div / 2;
+				const range = params.range;
+				const start = params.start;
 				for ( let r = 0; r <= steps; r ++ )
 				{
 					for ( let g = 0; g <= steps; g ++ )
@@ -496,7 +499,7 @@
 						for ( let b = 0; b <= steps; b ++ )
 						{
 							//if(r == g && r == b) continue;
-							for ( let i = -div; i <= div; i ++ )
+							for ( let i = start; i <= start + range; i ++ )
 							{
 								var ex = Math.pow(2, i);
 								var p = new THREE.Vector3(r/steps, g/steps, b/steps).multiplyScalar(ex);
@@ -547,13 +550,14 @@
 			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updatePoint);
 
 			gui.add(params, 'steps', 1, 20, 1).onChange(updatePoint);
-			gui.add(params, 'div', 1, 20, 1).onChange(updatePoint);
+			gui.add(params, 'start', -20, 20, 1).onChange(updatePoint);
+			gui.add(params, 'range', 0, 20, 1).onChange(updatePoint);
 			
 			
 			function render() {
 				
 				requestAnimationFrame( render );
-				XYZrenderer.render( XYZscene, perspCameraXYZ );
+				//XYZrenderer.render( XYZscene, perspCameraXYZ );
 				xyYrenderer.render( xyYscene, perspCamera_xyY );
 
 			}
@@ -563,7 +567,7 @@
 
 			function onWindowResize(){
 
-				var aspect = (window.innerWidth * 0.4) / window.innerHeight;
+				var aspect = (window.innerWidth) / window.innerHeight;
 			    perspCameraXYZ.aspect = aspect;
 			    perspCameraXYZ.updateProjectionMatrix();
 
@@ -579,8 +583,8 @@
 			    orthoCamera.updateProjectionMatrix();
 				*/
 
-			    XYZrenderer.setSize( window.innerWidth * 0.4, window.innerHeight );
-			    xyYrenderer.setSize( window.innerWidth * 0.4, window.innerHeight );
+			    //XYZrenderer.setSize( window.innerWidth * 0.4, window.innerHeight );
+			    xyYrenderer.setSize( window.innerWidth, window.innerHeight );
 
 			}
 		</script>
