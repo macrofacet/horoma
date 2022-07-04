@@ -293,17 +293,11 @@
 				return equation_curve(x, x_pivot, y_pivot, slope_pivot, toe_power, shoulder_power, scale);
 			}
 
-			function applyTonemap(rgb, slope, toe_power, shoulder_power)
+			function applyTonemap(rgb, slope, toe_power, shoulder_power, min_ev, max_ev)
 			{
 				var xyz = rgb.applyMatrix3(sRGB_to_XYZ);
 				var ajustedRGB = xyz.applyMatrix3(XYZ_to_adjusted);
-
-				ajustedRGB.x = (ajustedRGB.x) / (1 + ajustedRGB.x);
-				ajustedRGB.y = (ajustedRGB.y) / (1 + ajustedRGB.y);
-				ajustedRGB.z = (ajustedRGB.z) / (1 + ajustedRGB.z);
-
-				const min_ev = -10;
-				const max_ev = 7;
+				
 				const x_pivot = Math.abs(min_ev) / (max_ev - min_ev);
 				const y_pivot = 0.5;
 
@@ -315,9 +309,6 @@
 				var outputG = equation_full_curve(logG, x_pivot, y_pivot, slope, toe_power, shoulder_power);
 				var outputB = equation_full_curve(logB, x_pivot, y_pivot, slope, toe_power, shoulder_power);
 
-				//ajustedRGB.x = Math.min(Math.max(ajustedRGB.x, 0), 1);
-				//ajustedRGB.y = Math.min(Math.max(ajustedRGB.y, 0), 1);
-				//ajustedRGB.z = Math.min(Math.max(ajustedRGB.z, 0), 1);
 				return new THREE.Vector3(outputR, outputG, outputB);
 			}
 			
@@ -372,20 +363,22 @@
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
 				XYZ_to_sRGB: {value : XYZ_to_sRGB},
 				useXYZ: {value: false},
-				opacity: {value: 0.01}
+				opacity: {value: 0.1}
 			},
+			depthTest: false,
 			vertexShader: document.getElementById( 'vertexShader' ).textContent,
 			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
 			} );
 
 			material709_xyY.transparent = true;
-			material709_xyY.opacity = 0.01;
+			material709_xyY.opacity = 0.1;
 			
 			var cube709_XYZ = new THREE.Mesh( boxGeo, material709 );
 			XYZscene.add( cube709_XYZ );
 
 			var cube709_xyY = new THREE.Mesh( boxGeo, material709_xyY );
-			//xyYscene.add(cube709_xyY);
+			cube709_xyY.renderOrder = 0;
+			xyYscene.add(cube709_xyY);
 
 			var triangle = new THREE.Geometry();
 			triangle.dynamic = true;
@@ -459,6 +452,7 @@
 			//var pointsMaterial = new THREE.PointsMaterial( { color: 0x888888, size:0.05 } );
 			//var pointXYZ = new THREE.Points(pointCloudGeo, pointShaderMaterial);
 			var point_xyY = new THREE.Points(pointCloudGeo, pointShaderMaterial);
+			point_xyY.renderOrder = 1;
 			//XYZscene.add( pointXYZ );	
 			xyYscene.add( point_xyY );
 
@@ -471,6 +465,8 @@
 						steps:1,
 						start:-10,
 						range:20,
+						min_ev:-10,
+						max_ev:7,
 						slope:2.5,
 						toe_power:1.9,
 						shoulder_power:3.1,
@@ -573,7 +569,7 @@
 								var ex = Math.pow(2, i);
 								var p = new THREE.Vector3(r/steps, g/steps, b/steps).multiplyScalar(ex);
 
-								var tp = applyTonemap(p.clone(), params.slope, params.toe_power, params.shoulder_power);
+								var tp = applyTonemap(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
 								tp = tp.applyMatrix3(SatMatrix);
 						
 								tp.x = Math.min(Math.max(tp.x, 0), 1);
@@ -626,6 +622,10 @@
 			gui.add(params, 'steps', 1, 20, 1).onChange(updatePoint);
 			gui.add(params, 'start', -20, 20, 1).onChange(updatePoint);
 			gui.add(params, 'range', 0, 20, 1).onChange(updatePoint);
+
+			
+			gui.add(params, 'min_ev', -20, 20, 1).onChange(updatePoint);
+			gui.add(params, 'max_ev', 0, 20, 1).onChange(updatePoint);
 
 			
 			gui.add(params, 'slope', 0, 10, 0.01).onChange(updatePoint);
