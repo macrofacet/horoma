@@ -474,6 +474,7 @@
 						slope:2.5,
 						toe_power:1.9,
 						shoulder_power:3.1,
+						lerp:1,
 						ortho:false};
 
 			function lerp(a, b, t)
@@ -572,14 +573,19 @@
 								var ex = Math.pow(2, i);
 								var p = new THREE.Vector3(r/steps, g/steps, b/steps).multiplyScalar(ex);
 
-								var tp = applyTonemap(p, params.slope, params.toe_power, params.shoulder_power);
+								var tp = applyTonemap(p.clone(), params.slope, params.toe_power, params.shoulder_power);
 								tp = tp.applyMatrix3(SatMatrix);
 						
 								tp.x = Math.min(Math.max(tp.x, 0), 1);
 								tp.y = Math.min(Math.max(tp.y, 0), 1);
 								tp.z = Math.min(Math.max(tp.z, 0), 1);
 
-								positions.push( tp.x, tp.y, tp.z );
+								var fp = new THREE.Vector3();
+								fp.x = lerp(p.x, tp.x, params.lerp);
+								fp.y = lerp(p.y, tp.y, params.lerp);
+								fp.z = lerp(p.z, tp.z, params.lerp);
+
+								positions.push( fp.x, fp.y, fp.z );
 							}
 						}
 					}
@@ -625,6 +631,8 @@
 			gui.add(params, 'slope', 0, 10, 0.01).onChange(updatePoint);
 			gui.add(params, 'toe_power', 0, 10, 0.01).onChange(updatePoint);
 			gui.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
+
+			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updatePoint);
 			
 			
 			function render() {
