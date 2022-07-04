@@ -297,7 +297,7 @@
 			{
 				var xyz = rgb.applyMatrix3(sRGB_to_XYZ);
 				var ajustedRGB = xyz.applyMatrix3(XYZ_to_adjusted);
-				
+
 				const x_pivot = Math.abs(min_ev) / (max_ev - min_ev);
 				const y_pivot = 0.5;
 
@@ -393,6 +393,16 @@
 			);
 			XYZscene.add(line);
 
+
+			var sample_line_geo = new THREE.Geometry();
+			sample_line_geo.dynamic = true;
+
+			var sample_line = new THREE.Line(
+				sample_line_geo,
+			new THREE.LineBasicMaterial({ color: 0xFFFFFF })
+			);
+			xyYscene.add(sample_line);
+
 			var axesHelper = new THREE.AxesHelper( 1 );
 			XYZscene.add( axesHelper );
 
@@ -471,6 +481,7 @@
 						toe_power:1.9,
 						shoulder_power:3.1,
 						lerp:1,
+						colorIndex:0,
 						ortho:false};
 
 			function lerp(a, b, t)
@@ -557,13 +568,16 @@
 				const steps = params.steps;
 				const range = params.range;
 				const start = params.start;
+				
+				sample_line_geo.vertices.length = 0;
+				var counter = 0;
 				for ( let r = 0; r <= steps; r ++ )
 				{
 					for ( let g = 0; g <= steps; g ++ )
 					{
 						for ( let b = 0; b <= steps; b ++ )
 						{
-							//if(r == g && r == b) continue;
+							if(r == 0 && g == 0 && b == 0) continue;
 							for ( let i = start; i <= start + range; i ++ )
 							{
 								var ex = Math.pow(2, i);
@@ -582,7 +596,16 @@
 								fp.z = lerp(p.z, tp.z, params.lerp);
 
 								positions.push( fp.x, fp.y, fp.z );
+
+								if(counter == params.colorIndex)
+								{
+									var XYZ = fp.clone().applyMatrix3(sRGB_to_XYZ);
+									var xyY = XYZ_to_xyY(XYZ, new THREE.Vector2(0.3127, 0.3290));
+									sample_line_geo.vertices.push(xyY);
+								}
 							}
+							
+							counter++;
 						}
 					}
 				}
@@ -591,7 +614,7 @@
 
 				pointCloudGeo.computeBoundingSphere();
 
-
+				sample_line_geo.verticesNeedUpdate = true;
 
 				for (var i in gui.__controllers) {
 					gui.__controllers[i].updateDisplay();
@@ -633,6 +656,7 @@
 			gui.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
 
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updatePoint);
+			gui.add(params, 'colorIndex').onChange(updatePoint);
 			
 			
 			function render() {
