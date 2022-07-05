@@ -589,7 +589,7 @@
 							{
 								for(let j = 0; j <= substeps; j++)
 								{
-									var ex = lerp(Math.pow(2, i), Math.pow(2, i + 1), j / substeps);
+									var ex = Math.pow(2, i + (j / substeps));
 									var ratio = new THREE.Vector3();
 
 									if(k == 0)
