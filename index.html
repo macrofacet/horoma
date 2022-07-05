@@ -23,8 +23,10 @@
 			uniform mat3 convMatXYZ;	
 			uniform vec2 whitePoint;
 			varying vec3 vColorXYZ;	
+			varying vec3 vColorRGB;	
 			void main() {
-			
+				vColorRGB = position;
+			/*
 			 	vec3 xyz = convMatXYZ * position;
 				 vColorXYZ = xyz;
 				
@@ -42,8 +44,8 @@
 					xyY.y = whitePoint.y;
 					xyY.z = xyz.y; //pow(xyz.y, 1.0/3.0);
 				}
-
-			  vec4 mvPosition = modelViewMatrix * vec4( xyY, 1.0 );
+				*/
+			  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 			  gl_PointSize = 5.0;
 			  gl_Position = projectionMatrix * mvPosition;
 			}
@@ -54,10 +56,11 @@
 			
 			varying vec3 vColorXYZ;
 			uniform mat3 XYZ_to_sRGB;
+			varying vec3 vColorRGB;	
 		
 			void main() {
-				vec3 rgb = XYZ_to_sRGB * vColorXYZ;
-			  gl_FragColor = vec4( rgb, 1 );
+				//vec3 rgb = XYZ_to_sRGB * vColorXYZ;
+			  gl_FragColor = vec4( vColorRGB, 1 );
 			}
 		  </script>
 
@@ -378,7 +381,7 @@
 
 			var cube709_xyY = new THREE.Mesh( boxGeo, material709_xyY );
 			cube709_xyY.renderOrder = 0;
-			xyYscene.add(cube709_xyY);
+			//xyYscene.add(cube709_xyY);
 
 			var triangle = new THREE.Geometry();
 			triangle.dynamic = true;
@@ -401,7 +404,7 @@
 				sample_line_geo,
 			new THREE.LineBasicMaterial({ color: 0xFFFFFF })
 			);
-			xyYscene.add(sample_line);
+			//xyYscene.add(sample_line);
 
 			var axesHelper = new THREE.AxesHelper( 1 );
 			XYZscene.add( axesHelper );
@@ -475,13 +478,17 @@
 						steps:1,
 						start:-10,
 						range:20,
+						substeps:1,
 						min_ev:-10,
 						max_ev:7,
 						slope:2.5,
 						toe_power:1.9,
 						shoulder_power:3.1,
 						lerp:1,
-						colorIndex:0,
+						colorIndex:-1,
+						ratio_r:0,
+						ratio_g:0,
+						ratio_b:0,
 						ortho:false};
 
 			function lerp(a, b, t)
@@ -568,40 +575,75 @@
 				const steps = params.steps;
 				const range = params.range;
 				const start = params.start;
+				const substeps = params.substeps;
 				
 				sample_line_geo.vertices.length = 0;
 				var counter = 0;
-				for ( let r = 0; r <= steps; r ++ )
+				for ( let k = 0; k < 3; k ++ )
 				{
-					for ( let g = 0; g <= steps; g ++ )
+					for ( let a = 0; a <= steps; a ++ )
 					{
 						for ( let b = 0; b <= steps; b ++ )
 						{
-							if(r == 0 && g == 0 && b == 0) continue;
 							for ( let i = start; i <= start + range; i ++ )
 							{
-								var ex = Math.pow(2, i);
-								var p = new THREE.Vector3(r/steps, g/steps, b/steps).multiplyScalar(ex);
-
-								var tp = applyTonemap(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
-								tp = tp.applyMatrix3(SatMatrix);
-						
-								tp.x = Math.min(Math.max(tp.x, 0), 1);
-								tp.y = Math.min(Math.max(tp.y, 0), 1);
-								tp.z = Math.min(Math.max(tp.z, 0), 1);
-
-								var fp = new THREE.Vector3();
-								fp.x = lerp(p.x, tp.x, params.lerp);
-								fp.y = lerp(p.y, tp.y, params.lerp);
-								fp.z = lerp(p.z, tp.z, params.lerp);
-
-								positions.push( fp.x, fp.y, fp.z );
-
-								if(counter == params.colorIndex)
+								for(let j = 0; j <= substeps; j++)
 								{
-									var XYZ = fp.clone().applyMatrix3(sRGB_to_XYZ);
-									var xyY = XYZ_to_xyY(XYZ, new THREE.Vector2(0.3127, 0.3290));
-									sample_line_geo.vertices.push(xyY);
+									var ex = lerp(Math.pow(2, i), Math.pow(2, i + 1), j / substeps);
+									var ratio = new THREE.Vector3();
+
+									if(k == 0)
+									{
+										ratio.x = 1;
+										ratio.y = a / steps;
+										ratio.z = b / steps;
+									}
+									else if(k == 1)
+									{
+										ratio.x = a / steps;
+										ratio.y = 1;
+										ratio.z = b / steps;
+									}
+									else if(k == 2)
+									{
+										ratio.x = a / steps;
+										ratio.y = b / steps;
+										ratio.z = 1;
+									}
+
+									var p = ratio.clone().multiplyScalar(ex);
+
+									var tp = applyTonemap(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
+									tp = tp.applyMatrix3(SatMatrix);
+							
+									tp.x = Math.min(Math.max(tp.x, 0), 1);
+									tp.y = Math.min(Math.max(tp.y, 0), 1);
+									tp.z = Math.min(Math.max(tp.z, 0), 1);
+
+									var fp = new THREE.Vector3();
+									fp.x = lerp(p.x, tp.x, params.lerp);
+									fp.y = lerp(p.y, tp.y, params.lerp);
+									fp.z = lerp(p.z, tp.z, params.lerp);
+
+									if(params.colorIndex == -1 || counter == params.colorIndex)
+									{
+										positions.push( fp.x, fp.y, fp.z );
+
+										if(counter == params.colorIndex)
+										{
+											params.ratio_r = ratio.x;
+											params.ratio_g = ratio.y;
+											params.ratio_b = ratio.z;
+										}
+
+									}
+
+									/*if(counter == params.colorIndex)
+									{
+										var XYZ = fp.clone().applyMatrix3(sRGB_to_XYZ);
+										var xyY = XYZ_to_xyY(XYZ, new THREE.Vector2(0.3127, 0.3290));
+										sample_line_geo.vertices.push(xyY);
+									}*/
 								}
 							}
 							
@@ -645,6 +687,7 @@
 			gui.add(params, 'steps', 1, 20, 1).onChange(updatePoint);
 			gui.add(params, 'start', -20, 20, 1).onChange(updatePoint);
 			gui.add(params, 'range', 0, 20, 1).onChange(updatePoint);
+			gui.add(params, 'substeps', 0, 20, 1).onChange(updatePoint);
 
 			
 			gui.add(params, 'min_ev', -20, 20, 1).onChange(updatePoint);
@@ -656,7 +699,11 @@
 			gui.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
 
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updatePoint);
-			gui.add(params, 'colorIndex').onChange(updatePoint);
+			gui.add(params, 'colorIndex').onChange(updatePoint).step(1);
+
+			gui.add(params, 'ratio_r').step(0.01);
+			gui.add(params, 'ratio_g').step(0.01);
+			gui.add(params, 'ratio_b').step(0.01);
 			
 			
 			function render() {
