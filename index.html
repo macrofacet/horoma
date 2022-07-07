@@ -614,7 +614,11 @@
 									var p = ratio.clone().multiplyScalar(ex);
 
 									var tp = applyTonemap(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
-									tp = tp.applyMatrix3(SatMatrix);
+									
+									var des = tp.clone().dot(wgt);
+									tp.x = lerp(des, tp.x, params.lerp);
+									tp.y = lerp(des, tp.y, params.lerp);
+									tp.z = lerp(des, tp.z, params.lerp);
 							
 									tp.x = Math.min(Math.max(tp.x, 0), 1);
 									tp.y = Math.min(Math.max(tp.y, 0), 1);
