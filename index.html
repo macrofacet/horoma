@@ -202,14 +202,38 @@
 						toe_power:1.9,
 						shoulder_power:3.1,
 						lerp:1,
-						colorIndex:-1,
-						ratio_r:0,
-						ratio_g:0,
-						ratio_b:0,
+						useRatio:false,
+						ratio:0,
 						ortho:false};
 
 			var gui = new dat.GUI();
 
+			var samples = [];
+			function updateSamples()
+			{
+				const steps = params.steps;
+				const range = params.range;
+				const start = params.start;
+				const substeps = params.substeps;
+				
+				if(params.useRatio)
+				{
+					var ratio = new THREE.Vector3();
+					ratio.x = ((params.ratio & 0xFF0000) >> 16) / 255;
+					ratio.y = ((params.ratio & 0x00FF00) >> 8) / 255;
+					ratio.z = (params.ratio & 0x0000FF) / 255;
+
+					samples = GenerateLine(ratio, substeps, start, range);
+				}
+				else
+				{
+					samples = GenerateRamp(steps, substeps, start, range);
+				}
+
+				updatePoint();
+			}
+
+			
 			function updatePoint()
 			{
 				var xyR = new THREE.Vector2(params.xr, params.yr);
@@ -221,25 +245,18 @@
 				XYZ_to_adjusted = new THREE.Matrix3().getInverse(adjusted_to_XYZ);
 
 				const positions = [];
-				const steps = params.steps;
-				const range = params.range;
-				const start = params.start;
-				const substeps = params.substeps;
-
-				var ramp = GenerateRamp(steps, substeps, start, range);
 				
-				var counter = 0;
-				for ( let s = 0; s < ramp.length; s ++ )
+				for ( let s = 0; s < samples.length; s ++ )
 				{
-					var p = ramp[s];
+					var p = samples[s];
 					var tp = applyInsetTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
 					
 					// Saturation
 					const wgt = new THREE.Vector3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
 					var des = tp.clone().dot(wgt);
-					tp.x = lerp(des, tp.x, params.lerp);
-					tp.y = lerp(des, tp.y, params.lerp);
-					tp.z = lerp(des, tp.z, params.lerp);
+					tp.x = lerp(des, tp.x, params.saturation);
+					tp.y = lerp(des, tp.y, params.saturation);
+					tp.z = lerp(des, tp.z, params.saturation);
 			
 					tp.x = Math.min(Math.max(tp.x, 0), 1);
 					tp.y = Math.min(Math.max(tp.y, 0), 1);
@@ -262,7 +279,15 @@
 				}
 			}
 
-			updatePoint();
+			updateSamples();
+
+			gui.add(params, 'steps', 1, 20, 1).onChange(updateSamples);
+			gui.add(params, 'start', -20, 20, 1).onChange(updateSamples);
+			gui.add(params, 'range', 0, 20, 1).onChange(updateSamples);
+			gui.add(params, 'substeps', 0, 20, 1).onChange(updateSamples);
+
+			gui.add(params, 'useRatio').onChange(updateSamples);
+			gui.addColor(params, 'ratio').onChange(updateSamples);
 
 			gui.add(params, 'xr', 0, 1, 0.0001).onChange(updatePoint);
 			gui.add(params, 'yr', 0, 1, 0.0001).onChange(updatePoint);
@@ -277,30 +302,17 @@
 			gui.add(params, 'xw', 0, 1, 0.0001).onChange(updatePoint);
 			gui.add(params, 'yw', 0, 1, 0.0001).onChange(updatePoint);
 			
-			gui.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);			
-			
-			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updatePoint);
-
-			gui.add(params, 'steps', 1, 20, 1).onChange(updatePoint);
-			gui.add(params, 'start', -20, 20, 1).onChange(updatePoint);
-			gui.add(params, 'range', 0, 20, 1).onChange(updatePoint);
-			gui.add(params, 'substeps', 0, 20, 1).onChange(updatePoint);
-
-			
+			gui.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);
 			gui.add(params, 'min_ev', -20, 20, 1).onChange(updatePoint);
 			gui.add(params, 'max_ev', 0, 20, 1).onChange(updatePoint);
 
-			
 			gui.add(params, 'slope', 0, 10, 0.01).onChange(updatePoint);
 			gui.add(params, 'toe_power', 0, 10, 0.01).onChange(updatePoint);
 			gui.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
 
+			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updatePoint);
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updatePoint);
-			gui.add(params, 'colorIndex').onChange(updatePoint).step(1);
 
-			gui.add(params, 'ratio_r').step(0.01);
-			gui.add(params, 'ratio_g').step(0.01);
-			gui.add(params, 'ratio_b').step(0.01);
 			
 			
 			function render() {
