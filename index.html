@@ -9,26 +9,27 @@
 		</style>
 	</head>
 	<body>
-		<div id="XYZView" style="display:inline-block"></div>
 		<div id="xyYView" style="display:inline-block"></div>
 
 		<script src="js/three.js"></script>
 		<script src="js/controls/OrbitControls.js"></script>
-
-
+		
 		<script type="text/javascript" src="js/dat.gui.min.js"></script>
+
+		<script src="js/utils.js"></script>
+		<script src="js/inset.js"></script>
+		<script src="js/generator.js"></script>
+
 
 		<script type='x-shader/x-vertex' id='point_vs'>
 			
 			uniform mat3 convMatXYZ;	
 			uniform vec2 whitePoint;
-			varying vec3 vColorXYZ;	
 			varying vec3 vColorRGB;	
 			void main() {
 				vColorRGB = position;
 			/*
-			 	vec3 xyz = convMatXYZ * position;
-				 vColorXYZ = xyz;
+			 	vec3 xyz = convMatXYZ * vColorRGB;
 				
 				float sum = xyz.x + xyz.y + xyz.z;
 				vec3 xyY = vec3(0, 0, 0);
@@ -36,15 +37,15 @@
 				{
 					xyY.x = xyz.x / sum;
 					xyY.y = xyz.y / sum;
-					xyY.z = xyz.y; //pow(xyz.y, 1.0/3.0);
+					xyY.z = xyz.y;
 				}
 				else
 				{
 					xyY.x = whitePoint.x;
 					xyY.y = whitePoint.y;
-					xyY.z = xyz.y; //pow(xyz.y, 1.0/3.0);
+					xyY.z = xyz.y;
 				}
-				*/
+			*/
 			  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 			  gl_PointSize = 5.0;
 			  gl_Position = projectionMatrix * mvPosition;
@@ -53,31 +54,17 @@
 		  </script>
 		
 		  <script type='x-shader/x-fragment' id='point_fs'>
-			
-			varying vec3 vColorXYZ;
-			uniform mat3 XYZ_to_sRGB;
 			varying vec3 vColorRGB;	
 		
 			void main() {
-				//vec3 rgb = XYZ_to_sRGB * vColorXYZ;
 			  gl_FragColor = vec4( vColorRGB, 1 );
 			}
 		  </script>
 
 
 		<script type="x-shader/x-vertex" id="vertexShader">
-
-			mat3 transpose(mat3 m)
-			{
-			  return mat3(m[0][0], m[1][0], m[2][0],
-			              m[0][1], m[1][1], m[2][1],
-			              m[0][2], m[1][2], m[2][2]);
-			}
-
 			uniform mat3 convMatXYZ;
 			uniform vec2 whitePoint;
-			uniform bool useXYZ;
-			varying vec3 vColorXYZ;
 			varying vec3 vColorRGB;
 			void main() {
 
@@ -86,52 +73,35 @@
  
 				vec3 xyz = convMatXYZ * rgb;
 				vec3 position;
-				if(useXYZ)
+				float sum = xyz.x + xyz.y + xyz.z;
+				vec3 xyY = vec3(0, 0, 0);
+				if(sum != 0.0)
 				{
-					position = xyz;
+					xyY.x = xyz.x / sum;
+					xyY.y = xyz.y / sum;
+					xyY.z = xyz.y;
 				}
 				else
 				{
-					float sum = xyz.x + xyz.y + xyz.z;
-					vec3 xyY = vec3(0, 0, 0);
-					if(sum != 0.0)
-					{
-						xyY.x = xyz.x / sum;
-						xyY.y = xyz.y / sum;
-						xyY.z = xyz.y;
-					}
-					else
-					{
-						xyY.x = whitePoint.x;
-						xyY.y = whitePoint.y;
-						xyY.z = xyz.y;
-					}
-					position = xyY;
+					xyY.x = whitePoint.x;
+					xyY.y = whitePoint.y;
+					xyY.z = xyz.y;
 				}
+				position = xyY;
 
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 				gl_Position = projectionMatrix * mvPosition;
 
-				vColorXYZ = xyz;
 				vColorRGB = rgb;
 			}
 
 		</script>
 
 		<script type="x-shader/x-fragment" id="fragmentShader">
-			mat3 transpose(mat3 m)
-			{
-			  return mat3(m[0][0], m[1][0], m[2][0],
-			              m[0][1], m[1][1], m[2][1],
-			              m[0][2], m[1][2], m[2][2]);
-			}
-
-			uniform mat3 XYZ_to_sRGB;
-			varying vec3 vColorXYZ;
 			varying vec3 vColorRGB;
 			uniform float opacity;
 			void main() {
-				vec3 rgb = XYZ_to_sRGB * vColorXYZ;
+				vec3 rgb = vColorRGB;
 				if(any(greaterThan(rgb - vec3(1.0, 1.0, 1.0), vec3(0.001, 0.001, 0.001))) || any(lessThan(rgb, -vec3(0.001, 0.001, 0.001))))
 				{	
 					gl_FragColor = vec4( 0.1, 0.1, 0.1, opacity );	
@@ -142,230 +112,26 @@
 				}
 			}
 		</script>
-		<script>
-
-			function XYZ_to_xyY(XYZColor, whitePoint)
-			{
-				var XYZ = XYZColor;
-				var sum = XYZ.x + XYZ.y + XYZ.z;
-				var xyY = new THREE.Vector3(0, 0, 0);
-				if(sum != 0.0)
-				{
-					xyY.x = XYZ.x / sum;
-					xyY.y = XYZ.y / sum;
-					xyY.z = XYZ.y;
-				}
-				else
-				{
-					xyY.x = whitePoint.x;
-					xyY.y = whitePoint.y;
-					xyY.z = XYZ.y;
-				}
-				return xyY;
-			}
-
-			function xyY_to_XYZ(xyY)
-			{
-				if(xyY.y == 0)
-					return new THREE.Vector3(0, 0, 0);
-
-				var Y = xyY.z;
-				var X = (xyY.x * Y) / xyY.y;
-				var Z = ((1 - xyY.x - xyY.y) * Y) / xyY.y;
-
-				return new THREE.Vector3(X, Y, Z);
-			}
-
-			function unproject(xy)
-			{
-				return xyY_to_XYZ(new THREE.Vector3(xy.x, xy.y, 1));				
-			}
-
-			// https://mina86.com/2019/srgb-xyz-matrix/
-			function primaries_to_scale_vector(xy_red, xy_green, xy_blue, xy_white)
-			{
-				var XYZ_red = unproject(xy_red);
-				var XYZ_green = unproject(xy_green);
-				var XYZ_blue = unproject(xy_blue);
-				
-				var XYZ_white = unproject(xy_white);
-				
-				var temp = new THREE.Matrix3();
-				temp.set( 	XYZ_red.x,	XYZ_green.x,	XYZ_blue.x,
-							1,	1,	1,
-							XYZ_red.z,	XYZ_green.z,	XYZ_blue.z,);
-				var inverse = new THREE.Matrix3().getInverse(temp);
-				return XYZ_white.applyMatrix3(inverse);
-			}
-
-			function primaries_to_matrix(xy_red, xy_green, xy_blue, xy_white)
-			{
-				var XYZ_red = unproject(xy_red);
-				var XYZ_green = unproject(xy_green);
-				var XYZ_blue = unproject(xy_blue);
-				
-				var XYZ_white = unproject(xy_white);
-				
-				var temp = new THREE.Matrix3();
-				temp.set( 	XYZ_red.x,	XYZ_green.x,	XYZ_blue.x,
-							1,	1,	1,
-							XYZ_red.z,	XYZ_green.z,	XYZ_blue.z,);
-				var inverse = new THREE.Matrix3().getInverse(temp);
-				var scale = XYZ_white.applyMatrix3(inverse);
-				
-				var out = new THREE.Matrix3();
-				out.set( 	scale.x * XYZ_red.x, scale.y * XYZ_green.x,	scale.z * XYZ_blue.x,
-							scale.x * XYZ_red.y, scale.y * XYZ_green.y,	scale.z * XYZ_blue.y,
-							scale.x * XYZ_red.z, scale.y * XYZ_green.z,	scale.z * XYZ_blue.z,)
-				return out;
-			}
-
-			function ComputeCompressionMatrix(xyR, xyG, xyB, xyW, compression)
-			{
-				var scale_factor = 1 / (1 - compression);
-				var R = new THREE.Vector2(xyR.x, xyR.y).sub(xyW).multiplyScalar(scale_factor).add(xyW);
-				var G = new THREE.Vector2(xyG.x, xyG.y).sub(xyW).multiplyScalar(scale_factor).add(xyW);
-				var B = new THREE.Vector2(xyB.x, xyB.y).sub(xyW).multiplyScalar(scale_factor).add(xyW);
-				var W = new THREE.Vector2(xyW.x, xyW.y);
-
-				return primaries_to_matrix(R, G, B, W);
-			}
-
-			var sRGB_to_XYZ = primaries_to_matrix(new THREE.Vector2(0.64,0.33),
-														new THREE.Vector2(0.3,0.6), 
-														new THREE.Vector2(0.15,0.06), 
-														new THREE.Vector2(0.3127, 0.3290));
-
-			var adjusted_to_XYZ = ComputeCompressionMatrix(new THREE.Vector2(0.64,0.33),
-														new THREE.Vector2(0.3,0.6), 
-														new THREE.Vector2(0.15,0.06), 
-														new THREE.Vector2(0.3127, 0.3290), 0.10);
-
-			var XYZ_to_adjusted = new THREE.Matrix3().getInverse(adjusted_to_XYZ);
-
-			var XYZ_to_sRGB = new THREE.Matrix3().getInverse(sRGB_to_XYZ);
-
-			function open_domain_to_normalized_log2(in_od, minimum_ev, maximum_ev)
-			{
-				const in_middle_grey = 0.18;
-				var total_exposure = maximum_ev - minimum_ev;
-			
-				var output_log = Math.min(maximum_ev, Math.max(minimum_ev, Math.log2(in_od / in_middle_grey)));
-				
-				return (output_log - minimum_ev) / total_exposure;
-			}
-
-
-			function equation_scale(x_pivot, y_pivot, slope_pivot, power)
-			{
-				return Math.pow(Math.pow((slope_pivot * x_pivot), -power) * (Math.pow((slope_pivot * (x_pivot / y_pivot)), power) - 1.0), -1.0 / power);
-			}
-
-			function equation_hyperbolic(x, power)
-			{
-				return x / Math.pow(1.0 + Math.pow(x, power), 1.0 / power);
-			}
-
-			function equation_term(x, x_pivot, slope_pivot, scale)
-			{
-    			return (slope_pivot * (x - x_pivot)) / scale;
-			}
-
-			function equation_curve(x, x_pivot, y_pivot, slope_pivot, toe_power, shoulder_power, scale)
-			{
-				if(scale < 0.0)
-				{
-        			return scale * equation_hyperbolic(equation_term(x, x_pivot, slope_pivot, scale), toe_power) + y_pivot;
-				}
-				else
-				{
-					return scale * equation_hyperbolic(equation_term(x,x_pivot,slope_pivot,scale), shoulder_power) + y_pivot;
-				}
-			}
-
-			function equation_full_curve(x, x_pivot, y_pivot, slope_pivot, toe_power, shoulder_power)
-			{
-				var scale_x_pivot = x >= x_pivot ? 1 - x_pivot : x_pivot;
-				var scale_y_pivot = x >= x_pivot ? 1 - y_pivot : y_pivot;
-
-				var toe_scale = equation_scale(scale_x_pivot, scale_y_pivot, slope_pivot, toe_power);
-				var shoulder_scale = equation_scale(scale_x_pivot, scale_y_pivot, slope_pivot, shoulder_power);				
-
-				var scale = x >= x_pivot ? shoulder_scale : -toe_scale;
-
-				return equation_curve(x, x_pivot, y_pivot, slope_pivot, toe_power, shoulder_power, scale);
-			}
-
-			function applyTonemap(rgb, slope, toe_power, shoulder_power, min_ev, max_ev)
-			{
-				var xyz = rgb.applyMatrix3(sRGB_to_XYZ);
-				var ajustedRGB = xyz.applyMatrix3(XYZ_to_adjusted);
-
-				const x_pivot = Math.abs(min_ev) / (max_ev - min_ev);
-				const y_pivot = 0.5;
-
-				var logR = open_domain_to_normalized_log2(ajustedRGB.x, min_ev, max_ev);
-				var logG = open_domain_to_normalized_log2(ajustedRGB.y, min_ev, max_ev);
-				var logB = open_domain_to_normalized_log2(ajustedRGB.z, min_ev, max_ev);
-
-				var outputR = equation_full_curve(logR, x_pivot, y_pivot, slope, toe_power, shoulder_power);
-				var outputG = equation_full_curve(logG, x_pivot, y_pivot, slope, toe_power, shoulder_power);
-				var outputB = equation_full_curve(logB, x_pivot, y_pivot, slope, toe_power, shoulder_power);
-
-				return new THREE.Vector3(outputR, outputG, outputB);
-			}
-			
+		<script>			
 			var aspect = window.innerWidth / window.innerHeight;
-
-			var XYZscene = new THREE.Scene();
-			var perspCameraXYZ = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
-			perspCameraXYZ.position.z = 5;
-			
 
 			var xyYscene = new THREE.Scene();
 			xyYscene.background = new THREE.Color( "rgb(127,127,127)" );
 			var frustumSize = 2;
-			/*
-			var orthoCamera = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
-			orthoCamera.position.z = 5;
-			*/
 			
 			var perspCamera_xyY = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
 			perspCamera_xyY.position.z = 5;
-
-			var XYZrenderer = new THREE.WebGLRenderer();
-			//XYZrenderer.setSize( window.innerWidth * 0.4, window.innerHeight );
-			//document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
-
 			
 			var xyYrenderer = new THREE.WebGLRenderer();
 			xyYrenderer.setSize( window.innerWidth, window.innerHeight );
 			document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
 
 			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
-			
-
-			var material709 = new THREE.ShaderMaterial( {
-			uniforms: {
-				convMatXYZ: { value: sRGB_to_XYZ },
-				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-				XYZ_to_sRGB: {value : XYZ_to_sRGB},
-				useXYZ: {value: true},
-				opacity: {value: 0.8}
-			},
-			vertexShader: document.getElementById( 'vertexShader' ).textContent,
-			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
-			} );
-			
-			material709.transparent = true;
-			material709.opacity = 1.0;
 
 			var material709_xyY = new THREE.ShaderMaterial( {
 			uniforms: {
 				convMatXYZ: { value: sRGB_to_XYZ },
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-				XYZ_to_sRGB: {value : XYZ_to_sRGB},
-				useXYZ: {value: false},
 				opacity: {value: 0.1}
 			},
 			depthTest: false,
@@ -375,9 +141,6 @@
 
 			material709_xyY.transparent = true;
 			material709_xyY.opacity = 0.1;
-			
-			var cube709_XYZ = new THREE.Mesh( boxGeo, material709 );
-			XYZscene.add( cube709_XYZ );
 
 			var cube709_xyY = new THREE.Mesh( boxGeo, material709_xyY );
 			cube709_xyY.renderOrder = 0;
@@ -390,34 +153,11 @@
 			triangle.vertices.push(new THREE.Vector3(0, 1, 1));
 			triangle.vertices.push(new THREE.Vector3(-1, -1, 1));
 
-			var line = new THREE.Line(
-				triangle,
-			new THREE.LineBasicMaterial({ color: 0xFFFFFF })
-			);
-			XYZscene.add(line);
-
-
-			var sample_line_geo = new THREE.Geometry();
-			sample_line_geo.dynamic = true;
-
-			var sample_line = new THREE.Line(
-				sample_line_geo,
-			new THREE.LineBasicMaterial({ color: 0xFFFFFF })
-			);
-			//xyYscene.add(sample_line);
-
-			var axesHelper = new THREE.AxesHelper( 1 );
-			XYZscene.add( axesHelper );
-
 			var axesHelper = new THREE.AxesHelper( 1 );
 			xyYscene.add( axesHelper );
 
-
 			var size = 10;
 			var divisions = 10;
-
-			var controlsXYZ = new THREE.OrbitControls( perspCameraXYZ, XYZrenderer.domElement );
-			controlsXYZ.damping = 0.2;
 
 			var controls_xyY = new THREE.OrbitControls( perspCamera_xyY, xyYrenderer.domElement );
 			controls_xyY.damping = 0.2;
@@ -425,31 +165,13 @@
 			var pointCloudGeo = new THREE.BufferGeometry();
 
 			const positions = [];
-			for ( let i = -10; i < 10; i ++ )
-			{
-				var ex = Math.pow(2, i);
-				var p = new THREE.Vector3(1, 0, 0).multiplyScalar(ex);
-
-				//p = applyTonemap(p);
-
-				positions.push( p.x, p.y, p.z );
-			}
-
 			pointCloudGeo.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-
 			pointCloudGeo.computeBoundingSphere();
-
-			//var pointsGeom = new THREE.Geometry();
-			//var p = new THREE.Vector3();
-			//pointsGeom.vertices.push( p );
 
 			// uniforms
 			var uniforms = {
 				convMatXYZ: { value: sRGB_to_XYZ },
-				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-				XYZ_to_sRGB: {value : XYZ_to_sRGB},
-
-				//color: { value: new THREE.Color( 0xffff00 ) },
+				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) }
 			};
 
 			// point cloud material
@@ -458,22 +180,17 @@
 				vertexShader:   document.getElementById( 'point_vs' ).textContent,
 				fragmentShader: document.getElementById( 'point_fs' ).textContent,
 				transparent:  true,
-				//vertexColors: true
-
 			});
 
-			//var pointsMaterial = new THREE.PointsMaterial( { color: 0x888888, size:0.05 } );
-			//var pointXYZ = new THREE.Points(pointCloudGeo, pointShaderMaterial);
 			var point_xyY = new THREE.Points(pointCloudGeo, pointShaderMaterial);
 			point_xyY.renderOrder = 1;
-			//XYZscene.add( pointXYZ );	
 			xyYscene.add( point_xyY );
-
-
 			
 
+			// UI
+
 			var params = {xr:0.64, yr:0.33, xg:0.3, yg:0.6, xb:0.15, yb:0.06, xw:0.3127, yw:0.3290, 
-						scale:1, compression:0, 
+						compression:0, 
 						saturation:1,
 						steps:1,
 						start:-10,
@@ -491,176 +208,54 @@
 						ratio_b:0,
 						ortho:false};
 
-			function lerp(a, b, t)
-			{
-				return (1 - t) * a + t * b;
-			}
-
 			var gui = new dat.GUI();
 
 			function updatePoint()
 			{
-				
-				/*
-				var Ys = primaries_to_matrix(new THREE.Vector2(params.xr, params.yr), 
-												new THREE.Vector2(params.xg, params.yg), 
-												new THREE.Vector2(params.xb, params.yb), 
-												new THREE.Vector2(params.xw, params.yw));
-
-				triangle.vertices[0] = triangle.vertices[3] = new THREE.Vector3(params.xr, params.yr, (1 - params.scale) + Ys.x * params.scale);
-				
-				triangle.vertices[1] = new THREE.Vector3(params.xg, params.yg, (1 - params.scale) + Ys.y * params.scale);				
-				triangle.vertices[2] = new THREE.Vector3(params.xb, params.yb, (1 - params.scale) + Ys.z * params.scale); 
-
-				*/
 				var xyR = new THREE.Vector2(params.xr, params.yr);
 				var xyG = new THREE.Vector2(params.xg, params.yg);
 				var xyB = new THREE.Vector2(params.xb, params.yb);
 				var xyW = new THREE.Vector2(params.xw, params.yw);
-				/*
-				var scale_factor = 1 / (1 - params.compression);
-				xyR.sub(xyW).multiplyScalar(scale_factor).add(xyW);
-				xyG.sub(xyW).multiplyScalar(scale_factor).add(xyW);
-				xyB.sub(xyW).multiplyScalar(scale_factor).add(xyW);
 				
-				var Y = primaries_to_scale_vector(xyR, xyG, xyB, xyW);
-
-				var XYZR = xyY_to_XYZ(new THREE.Vector3(xyR.x, xyR.y, lerp(1, Y.x, params.scale)));
-				var XYZG = xyY_to_XYZ(new THREE.Vector3(xyG.x, xyG.y, lerp(1, Y.y, params.scale)));
-				var XYZB = xyY_to_XYZ(new THREE.Vector3(xyB.x, xyB.y, lerp(1, Y.z, params.scale)));
-				var XYZW = xyY_to_XYZ(new THREE.Vector3(xyW.x, xyW.y, 1));
-
-				var M = new THREE.Matrix3();
-				M.set( 		XYZR.x, XYZG.x,	XYZB.x,
-							XYZR.y, XYZG.y,	XYZB.y,
-							XYZR.z, XYZG.z,	XYZB.z,)
-
-				//material709.uniforms.convMatXYZ.value = M;
-				//material709.uniforms.whitePoint.value = xyW;
-
-				//material709_xyY.uniforms.convMatXYZ.value = M;
-				//material709_xyY.uniforms.whitePoint.value = xyW;
-
-				triangle.vertices[0] = triangle.vertices[3] = XYZR;
-				
-				triangle.vertices[1] = XYZG;			
-				triangle.vertices[2] = XYZB;
-				triangle.verticesNeedUpdate = true;
-				*/
-
-				/*var scaled
-				var tonemappedRGB = applyTonemap(new THREE.Vector3(params.r, params.g, params.b).multiplyScalar(params.intensity), M);
-				
-				params.ar = tonemappedRGB.x;
-				params.ag = tonemappedRGB.y;
-				params.ab = tonemappedRGB.z;
-				params.c = (Math.pow(params.ar, 1/2.2) * 255) << 16 | (Math.pow(params.ag, 1/2.2) * 255) << 8 | Math.pow(params.ab, 1/2.2) * 255;
-				
-				var XYZ_image = tonemappedRGB.applyMatrix3(sRGB_to_XYZ);
-				pointXYZ.position.copy(XYZ_image);
-				point_xyY.position.copy(XYZ_to_xyY(XYZ_image, xyW));
-				*/
 				adjusted_to_XYZ = ComputeCompressionMatrix(xyR, xyG, xyB, xyW, params.compression);
 				XYZ_to_adjusted = new THREE.Matrix3().getInverse(adjusted_to_XYZ);
-
-				var s = params.saturation;
-				var si = 1 - s;
-				var wgt = new THREE.Vector3(0.2126729,  0.7151522,  0.0721750);
-				var SatMatrix = new THREE.Matrix3();
-				SatMatrix.set( 	si * wgt.x + s, si * wgt.y,		si * wgt.z,
-								si * wgt.x, 	si * wgt.y + + s,	si * wgt.z,
-								si * wgt.x, 	si * wgt.y,		si * wgt.z + + s,)
 
 				const positions = [];
 				const steps = params.steps;
 				const range = params.range;
 				const start = params.start;
 				const substeps = params.substeps;
+
+				var ramp = GenerateRamp(steps, substeps, start, range);
 				
-				sample_line_geo.vertices.length = 0;
 				var counter = 0;
-				for ( let k = 0; k < 3; k ++ )
+				for ( let s = 0; s < ramp.length; s ++ )
 				{
-					for ( let a = 0; a <= steps; a ++ )
-					{
-						for ( let b = 0; b <= steps; b ++ )
-						{
-							for ( let i = start; i <= start + range; i ++ )
-							{
-								for(let j = 0; j <= substeps; j++)
-								{
-									var ex = Math.pow(2, i + (j / substeps));
-									var ratio = new THREE.Vector3();
+					var p = ramp[s];
+					var tp = applyInsetTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
+					
+					// Saturation
+					const wgt = new THREE.Vector3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
+					var des = tp.clone().dot(wgt);
+					tp.x = lerp(des, tp.x, params.lerp);
+					tp.y = lerp(des, tp.y, params.lerp);
+					tp.z = lerp(des, tp.z, params.lerp);
+			
+					tp.x = Math.min(Math.max(tp.x, 0), 1);
+					tp.y = Math.min(Math.max(tp.y, 0), 1);
+					tp.z = Math.min(Math.max(tp.z, 0), 1);
 
-									if(k == 0)
-									{
-										ratio.x = 1;
-										ratio.y = a / steps;
-										ratio.z = b / steps;
-									}
-									else if(k == 1)
-									{
-										ratio.x = a / steps;
-										ratio.y = 1;
-										ratio.z = b / steps;
-									}
-									else if(k == 2)
-									{
-										ratio.x = a / steps;
-										ratio.y = b / steps;
-										ratio.z = 1;
-									}
+					// Lerp between raw and image
+					var fp = new THREE.Vector3();
+					fp.x = lerp(p.x, tp.x, params.lerp);
+					fp.y = lerp(p.y, tp.y, params.lerp);
+					fp.z = lerp(p.z, tp.z, params.lerp);
 
-									var p = ratio.clone().multiplyScalar(ex);
-
-									var tp = applyTonemap(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
-									
-									var des = tp.clone().dot(wgt);
-									tp.x = lerp(des, tp.x, params.lerp);
-									tp.y = lerp(des, tp.y, params.lerp);
-									tp.z = lerp(des, tp.z, params.lerp);
-							
-									tp.x = Math.min(Math.max(tp.x, 0), 1);
-									tp.y = Math.min(Math.max(tp.y, 0), 1);
-									tp.z = Math.min(Math.max(tp.z, 0), 1);
-
-									var fp = new THREE.Vector3();
-									fp.x = lerp(p.x, tp.x, params.lerp);
-									fp.y = lerp(p.y, tp.y, params.lerp);
-									fp.z = lerp(p.z, tp.z, params.lerp);
-
-									if(params.colorIndex == -1 || counter == params.colorIndex)
-									{
-										positions.push( fp.x, fp.y, fp.z );
-
-										if(counter == params.colorIndex)
-										{
-											params.ratio_r = ratio.x;
-											params.ratio_g = ratio.y;
-											params.ratio_b = ratio.z;
-										}
-
-									}
-
-									/*if(counter == params.colorIndex)
-									{
-										var XYZ = fp.clone().applyMatrix3(sRGB_to_XYZ);
-										var xyY = XYZ_to_xyY(XYZ, new THREE.Vector2(0.3127, 0.3290));
-										sample_line_geo.vertices.push(xyY);
-									}*/
-								}
-							}
-							
-							counter++;
-						}
-					}
+					positions.push(fp.x, fp.y, fp.z);
 				}
 
 				pointCloudGeo.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-
 				pointCloudGeo.computeBoundingSphere();
-
-				sample_line_geo.verticesNeedUpdate = true;
 
 				for (var i in gui.__controllers) {
 					gui.__controllers[i].updateDisplay();
@@ -681,8 +276,6 @@
 			
 			gui.add(params, 'xw', 0, 1, 0.0001).onChange(updatePoint);
 			gui.add(params, 'yw', 0, 1, 0.0001).onChange(updatePoint);
-
-			gui.add(params, 'scale', 0, 1, 0.0001).onChange(updatePoint);
 			
 			gui.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);			
 			
@@ -713,10 +306,10 @@
 			function render() {
 				
 				requestAnimationFrame( render );
-				//XYZrenderer.render( XYZscene, perspCameraXYZ );
 				xyYrenderer.render( xyYscene, perspCamera_xyY );
 
 			}
+
 			render();
 
 			window.addEventListener( 'resize', onWindowResize, false );
@@ -724,27 +317,11 @@
 			function onWindowResize(){
 
 				var aspect = (window.innerWidth) / window.innerHeight;
-			    perspCameraXYZ.aspect = aspect;
-			    perspCameraXYZ.updateProjectionMatrix();
 
 				perspCamera_xyY.aspect = aspect;
 			    perspCamera_xyY.updateProjectionMatrix();
-
-				/*
-			    orthoCamera.left = frustumSize * aspect / - 2;
-			    orthoCamera.right = frustumSize * aspect / 2;
-			    orthoCamera.top = frustumSize / 2;
-			    orthoCamera.bottom = frustumSize / - 2;
-
-			    orthoCamera.updateProjectionMatrix();
-				*/
-
-			    //XYZrenderer.setSize( window.innerWidth * 0.4, window.innerHeight );
 			    xyYrenderer.setSize( window.innerWidth, window.innerHeight );
-
 			}
 		</script>
-		
-		<script>
 	</body>
 </html>
