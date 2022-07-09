@@ -189,8 +189,7 @@
 
 			// UI
 
-			var params = {xr:0.64, yr:0.33, xg:0.3, yg:0.6, xb:0.15, yb:0.06, xw:0.3127, yw:0.3290, 
-						compression:0, 
+			var params = {compression:0, 
 						saturation:1,
 						steps:1,
 						start:-10,
@@ -235,13 +234,8 @@
 
 			
 			function updatePoint()
-			{
-				var xyR = new THREE.Vector2(params.xr, params.yr);
-				var xyG = new THREE.Vector2(params.xg, params.yg);
-				var xyB = new THREE.Vector2(params.xb, params.yb);
-				var xyW = new THREE.Vector2(params.xw, params.yw);
-				
-				adjusted_to_XYZ = ComputeCompressionMatrix(xyR, xyG, xyB, xyW, params.compression);
+			{	
+				adjusted_to_XYZ = ComputeCompressionMatrix(sRGB_Space.red, sRGB_Space.green, sRGB_Space.blue, sRGB_Space.white, params.compression);
 				XYZ_to_adjusted = new THREE.Matrix3().getInverse(adjusted_to_XYZ);
 
 				const positions = [];
@@ -288,19 +282,6 @@
 
 			gui.add(params, 'useRatio').onChange(updateSamples);
 			gui.addColor(params, 'ratio').onChange(updateSamples);
-
-			gui.add(params, 'xr', 0, 1, 0.0001).onChange(updatePoint);
-			gui.add(params, 'yr', 0, 1, 0.0001).onChange(updatePoint);
-
-			gui.add(params, 'xg', 0, 1, 0.0001).onChange(updatePoint);
-			gui.add(params, 'yg', 0, 1, 0.0001).onChange(updatePoint);
-
-			gui.add(params, 'xb', 0, 1, 0.0001).onChange(updatePoint);
-			gui.add(params, 'yb', 0, 1, 0.0001).onChange(updatePoint);
-
-			
-			gui.add(params, 'xw', 0, 1, 0.0001).onChange(updatePoint);
-			gui.add(params, 'yw', 0, 1, 0.0001).onChange(updatePoint);
 			
 			gui.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);
 			gui.add(params, 'min_ev', -20, 20, 1).onChange(updatePoint);

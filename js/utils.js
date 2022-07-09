@@ -81,9 +81,11 @@ function lerp(a, b, t)
 }
 
 
+var sRGB_Space = {
+    red : new THREE.Vector2(0.64,0.33),
+    green : new THREE.Vector2(0.3,0.6),
+    blue : new THREE.Vector2(0.15,0.06), 
+    white : new THREE.Vector2(0.3127, 0.3290)
+}
 
-
-var sRGB_to_XYZ = primaries_to_matrix(new THREE.Vector2(0.64,0.33),
-                                            new THREE.Vector2(0.3,0.6), 
-                                            new THREE.Vector2(0.15,0.06), 
-                                            new THREE.Vector2(0.3127, 0.3290));
+var sRGB_to_XYZ = primaries_to_matrix(sRGB_Space.red, sRGB_Space.green, sRGB_Space.blue, sRGB_Space.white);
