@@ -7,21 +7,12 @@
 			body { margin: 0; }
 			canvas { width: 100%; height: 100% }
 		</style>
-				
-		<!--<script src="js/three.js"></script>-->
-		<!--<script src="js/controls/OrbitControls.js"></script>-->
-
-		<!--<script type="text/javascript" src="js/dat.gui.min.js"></script>-->
-
-		<!--<script type="module" src="js/utils.js"></script>
-		<script type="module" src="js/inset.js"></script>
-		<script type="module" src="js/generator.js"></script>-->
-		<!--<script src="js/loaders/EXRLoader.js"></script>-->
 	</head>
 	<body>
 		<div id="xyYView" style="display:inline-block"></div>
 
-
+		<canvas id="imgCanvas"></canvas>
+		
 		<script type='x-shader/x-vertex' id='point_vs'>
 			
 			uniform mat3 convMatXYZ;	
@@ -124,12 +115,20 @@
 		<script type="module">
 			import * as THREE from "three";
 			import { OrbitControls } from "https://cdn.skypack.dev/three@0.142.0/examples/jsm/controls/OrbitControls";
+			import { EXRLoader } from "https://cdn.skypack.dev/three@0.142.0/examples/jsm/loaders/EXRLoader";
 			import dat from "https://cdn.skypack.dev/dat.gui";
 
 
 			import * as Utils from './js/utils.js'
 			import * as Generator from './js/generator.js'
 			import * as Inset from './js/inset.js'
+
+			var sourceData = new ArrayBuffer();
+			var loader = new EXRLoader();
+			loader.setDataType(THREE.FloatType);
+			loader.load( "./images/red_xmas_rec709.exr", function ( texture, textureData ) {
+							sourceData = textureData.data;
+						});
 
 			var aspect = window.innerWidth / window.innerHeight;
 
@@ -239,6 +238,15 @@
 				{
 					samples = Generator.GenerateRamp(steps, substeps, start, range);
 				}
+
+				
+				/* 
+				//Use Image
+				for(var i = 0; i < sourceData.length; i+=4)
+					{
+						samples.push(new THREE.Vector3(sourceData[i], sourceData[i+1], sourceData[i+2]));
+					}
+				*/
 
 				updatePoint();
 			}
