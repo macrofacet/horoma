@@ -1,4 +1,6 @@
-function XYZ_to_xyY(XYZColor, whitePoint)
+import * as THREE from 'three';
+
+export function XYZ_to_xyY(XYZColor, whitePoint)
 {
     var XYZ = XYZColor;
     var sum = XYZ.x + XYZ.y + XYZ.z;
@@ -18,7 +20,7 @@ function XYZ_to_xyY(XYZColor, whitePoint)
     return xyY;
 }
 
-function xyY_to_XYZ(xyY)
+export function xyY_to_XYZ(xyY)
 {
     if(xyY.y == 0)
         return new THREE.Vector3(0, 0, 0);
@@ -30,13 +32,13 @@ function xyY_to_XYZ(xyY)
     return new THREE.Vector3(X, Y, Z);
 }
 
-function unproject(xy)
+export function unproject(xy)
 {
     return xyY_to_XYZ(new THREE.Vector3(xy.x, xy.y, 1));				
 }
 
 // https://mina86.com/2019/srgb-xyz-matrix/
-function primaries_to_scale_vector(xy_red, xy_green, xy_blue, xy_white)
+export function primaries_to_scale_vector(xy_red, xy_green, xy_blue, xy_white)
 {
     var XYZ_red = unproject(xy_red);
     var XYZ_green = unproject(xy_green);
@@ -48,11 +50,11 @@ function primaries_to_scale_vector(xy_red, xy_green, xy_blue, xy_white)
     temp.set( 	XYZ_red.x,	XYZ_green.x,	XYZ_blue.x,
                 1,	1,	1,
                 XYZ_red.z,	XYZ_green.z,	XYZ_blue.z,);
-    var inverse = new THREE.Matrix3().getInverse(temp);
+    var inverse = temp.clone().invert();
     return XYZ_white.applyMatrix3(inverse);
 }
 
-function primaries_to_matrix(xy_red, xy_green, xy_blue, xy_white)
+export function primaries_to_matrix(xy_red, xy_green, xy_blue, xy_white)
 {
     var XYZ_red = unproject(xy_red);
     var XYZ_green = unproject(xy_green);
@@ -64,7 +66,7 @@ function primaries_to_matrix(xy_red, xy_green, xy_blue, xy_white)
     temp.set( 	XYZ_red.x,	XYZ_green.x,	XYZ_blue.x,
                 1,	1,	1,
                 XYZ_red.z,	XYZ_green.z,	XYZ_blue.z,);
-    var inverse = new THREE.Matrix3().getInverse(temp);
+    var inverse = temp.clone().invert();
     var scale = XYZ_white.applyMatrix3(inverse);
     
     var out = new THREE.Matrix3();
@@ -74,18 +76,11 @@ function primaries_to_matrix(xy_red, xy_green, xy_blue, xy_white)
     return out;
 }
 
-
-function lerp(a, b, t)
-{
-    return (1 - t) * a + t * b;
-}
-
-
-var sRGB_Space = {
+export const sRGB_Space = {
     red : new THREE.Vector2(0.64,0.33),
     green : new THREE.Vector2(0.3,0.6),
     blue : new THREE.Vector2(0.15,0.06), 
     white : new THREE.Vector2(0.3127, 0.3290)
 }
 
-var sRGB_to_XYZ = primaries_to_matrix(sRGB_Space.red, sRGB_Space.green, sRGB_Space.blue, sRGB_Space.white);
+export const sRGB_to_XYZ = primaries_to_matrix(sRGB_Space.red, sRGB_Space.green, sRGB_Space.blue, sRGB_Space.white);

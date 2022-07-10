@@ -7,18 +7,19 @@
 			body { margin: 0; }
 			canvas { width: 100%; height: 100% }
 		</style>
+				
+		<!--<script src="js/three.js"></script>-->
+		<!--<script src="js/controls/OrbitControls.js"></script>-->
+
+		<!--<script type="text/javascript" src="js/dat.gui.min.js"></script>-->
+
+		<!--<script type="module" src="js/utils.js"></script>
+		<script type="module" src="js/inset.js"></script>
+		<script type="module" src="js/generator.js"></script>-->
+		<!--<script src="js/loaders/EXRLoader.js"></script>-->
 	</head>
 	<body>
 		<div id="xyYView" style="display:inline-block"></div>
-
-		<script src="js/three.js"></script>
-		<script src="js/controls/OrbitControls.js"></script>
-		
-		<script type="text/javascript" src="js/dat.gui.min.js"></script>
-
-		<script src="js/utils.js"></script>
-		<script src="js/inset.js"></script>
-		<script src="js/generator.js"></script>
 
 
 		<script type='x-shader/x-vertex' id='point_vs'>
@@ -112,7 +113,24 @@
 				}
 			}
 		</script>
-		<script>			
+		<script type="importmap">
+			{
+			  "imports": {
+				"three": "https://cdn.skypack.dev/three@0.142.0"
+			  }
+			}
+		  </script>
+
+		<script type="module">
+			import * as THREE from "three";
+			import { OrbitControls } from "https://cdn.skypack.dev/three@0.142.0/examples/jsm/controls/OrbitControls";
+			import dat from "https://cdn.skypack.dev/dat.gui";
+
+
+			import * as Utils from './js/utils.js'
+			import * as Generator from './js/generator.js'
+			import * as Inset from './js/inset.js'
+
 			var aspect = window.innerWidth / window.innerHeight;
 
 			var xyYscene = new THREE.Scene();
@@ -130,7 +148,7 @@
 
 			var material709_xyY = new THREE.ShaderMaterial( {
 			uniforms: {
-				convMatXYZ: { value: sRGB_to_XYZ },
+				convMatXYZ: { value: Utils.sRGB_to_XYZ },
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
 				opacity: {value: 0.1}
 			},
@@ -146,31 +164,24 @@
 			cube709_xyY.renderOrder = 0;
 			//xyYscene.add(cube709_xyY);
 
-			var triangle = new THREE.Geometry();
-			triangle.dynamic = true;
-			triangle.vertices.push(new THREE.Vector3(-1, -1, 1));
-			triangle.vertices.push(new THREE.Vector3(1, -1, 1));
-			triangle.vertices.push(new THREE.Vector3(0, 1, 1));
-			triangle.vertices.push(new THREE.Vector3(-1, -1, 1));
-
 			var axesHelper = new THREE.AxesHelper( 1 );
 			xyYscene.add( axesHelper );
 
 			var size = 10;
 			var divisions = 10;
 
-			var controls_xyY = new THREE.OrbitControls( perspCamera_xyY, xyYrenderer.domElement );
+			var controls_xyY = new OrbitControls( perspCamera_xyY, xyYrenderer.domElement );
 			controls_xyY.damping = 0.2;
 			
 			var pointCloudGeo = new THREE.BufferGeometry();
 
 			const positions = [];
-			pointCloudGeo.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+			pointCloudGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 			pointCloudGeo.computeBoundingSphere();
 
 			// uniforms
 			var uniforms = {
-				convMatXYZ: { value: sRGB_to_XYZ },
+				convMatXYZ: { value: Utils.sRGB_to_XYZ },
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) }
 			};
 
@@ -222,11 +233,11 @@
 					ratio.y = params.ratio[1];
 					ratio.z = params.ratio[2];
 
-					samples = GenerateLine(ratio, substeps, start, range);
+					samples = Generator.GenerateLine(ratio, substeps, start, range);
 				}
 				else
 				{
-					samples = GenerateRamp(steps, substeps, start, range);
+					samples = Generator.GenerateRamp(steps, substeps, start, range);
 				}
 
 				updatePoint();
@@ -235,22 +246,21 @@
 			
 			function updatePoint()
 			{	
-				adjusted_to_XYZ = ComputeCompressionMatrix(sRGB_Space.red, sRGB_Space.green, sRGB_Space.blue, sRGB_Space.white, params.compression);
-				XYZ_to_adjusted = new THREE.Matrix3().getInverse(adjusted_to_XYZ);
-
+				Inset.setCompressionMatrix(params.compression);
+				
 				const positions = [];
 				
 				for ( let s = 0; s < samples.length; s ++ )
 				{
 					var p = samples[s];
-					var tp = applyInsetTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
+					var tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
 					
 					// Saturation
 					const wgt = new THREE.Vector3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
 					var des = tp.clone().dot(wgt);
-					tp.x = lerp(des, tp.x, params.saturation);
-					tp.y = lerp(des, tp.y, params.saturation);
-					tp.z = lerp(des, tp.z, params.saturation);
+					tp.x = THREE.MathUtils.lerp(des, tp.x, params.saturation);
+					tp.y = THREE.MathUtils.lerp(des, tp.y, params.saturation);
+					tp.z = THREE.MathUtils.lerp(des, tp.z, params.saturation);
 			
 					tp.x = Math.min(Math.max(tp.x, 0), 1);
 					tp.y = Math.min(Math.max(tp.y, 0), 1);
@@ -258,14 +268,14 @@
 
 					// Lerp between raw and image
 					var fp = new THREE.Vector3();
-					fp.x = lerp(p.x, tp.x, params.lerp);
-					fp.y = lerp(p.y, tp.y, params.lerp);
-					fp.z = lerp(p.z, tp.z, params.lerp);
+					fp.x = THREE.MathUtils.lerp(p.x, tp.x, params.lerp);
+					fp.y = THREE.MathUtils.lerp(p.y, tp.y, params.lerp);
+					fp.z = THREE.MathUtils.lerp(p.z, tp.z, params.lerp);
 
 					positions.push(fp.x, fp.y, fp.z);
 				}
 
-				pointCloudGeo.addAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+				pointCloudGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 				pointCloudGeo.computeBoundingSphere();
 
 				for (var i in gui.__controllers) {
@@ -294,7 +304,7 @@
 			algorithmFolder.add(params, 'toe_power', 0, 10, 0.01).onChange(updatePoint);
 			algorithmFolder.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
 
-			
+
 			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updatePoint);
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updatePoint);
 

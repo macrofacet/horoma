@@ -1,4 +1,6 @@
-function GenerateRamp(numStepsRGB, numStepsExp, startExp, rangeExp)
+import * as THREE from 'three';
+
+export function GenerateRamp(numStepsRGB, numStepsExp, startExp, rangeExp)
 {
     var output = [];
     for ( let k = 0; k < 3; k ++ )
@@ -43,47 +45,7 @@ function GenerateRamp(numStepsRGB, numStepsExp, startExp, rangeExp)
     return output;
 }
 
-
-function GetRatio(numStepsRGB, index)
-{
-    var counter = 0;
-    for ( let k = 0; k < 3; k ++ )
-    {
-        for ( let a = 0; a <= numStepsRGB; a ++ )
-        {
-            for ( let b = 0; b <= numStepsRGB; b ++ )
-            {
-                if(index == counter)
-                {
-                    var ratio = new THREE.Vector3();
-
-                    if(k == 0)
-                    {
-                        ratio.x = 1;
-                        ratio.y = a / numStepsRGB;
-                        ratio.z = b / numStepsRGB;
-                    }
-                    else if(k == 1)
-                    {
-                        ratio.x = a / numStepsRGB;
-                        ratio.y = 1;
-                        ratio.z = b / numStepsRGB;
-                    }
-                    else if(k == 2)
-                    {
-                        ratio.x = a / numStepsRGB;
-                        ratio.y = b / numStepsRGB;
-                        ratio.z = 1;
-                    }
-                    return ratio;
-                }
-                counter ++;
-            }
-        }
-    }
-}
-
-function GenerateLine(RGBRatio, numStepsExp, startExp, rangeExp)
+export function GenerateLine(RGBRatio, numStepsExp, startExp, rangeExp)
 {
     var output = [];
     for ( let i = startExp; i <= startExp + rangeExp; i ++ )

@@ -1,5 +1,7 @@
+import * as THREE from 'three';
+import * as Utils from './utils.js'
 
-function ComputeCompressionMatrix(xyR, xyG, xyB, xyW, compression)
+export function ComputeCompressionMatrix(xyR, xyG, xyB, xyW, compression)
 {
     var scale_factor = 1 / (1 - compression);
     var R = new THREE.Vector2(xyR.x, xyR.y).sub(xyW).multiplyScalar(scale_factor).add(xyW);
@@ -7,22 +9,9 @@ function ComputeCompressionMatrix(xyR, xyG, xyB, xyW, compression)
     var B = new THREE.Vector2(xyB.x, xyB.y).sub(xyW).multiplyScalar(scale_factor).add(xyW);
     var W = new THREE.Vector2(xyW.x, xyW.y);
 
-    return primaries_to_matrix(R, G, B, W);
+    return Utils.primaries_to_matrix(R, G, B, W);
 }
 
-var sRGB_to_XYZ = primaries_to_matrix(new THREE.Vector2(0.64,0.33),
-                                            new THREE.Vector2(0.3,0.6), 
-                                            new THREE.Vector2(0.15,0.06), 
-                                            new THREE.Vector2(0.3127, 0.3290));
-
-var adjusted_to_XYZ = ComputeCompressionMatrix(new THREE.Vector2(0.64,0.33),
-                                            new THREE.Vector2(0.3,0.6), 
-                                            new THREE.Vector2(0.15,0.06), 
-                                            new THREE.Vector2(0.3127, 0.3290), 0.10);
-
-var XYZ_to_adjusted = new THREE.Matrix3().getInverse(adjusted_to_XYZ);
-
-var XYZ_to_sRGB = new THREE.Matrix3().getInverse(sRGB_to_XYZ);
 
 function open_domain_to_normalized_log2(in_od, minimum_ev, maximum_ev)
 {
@@ -75,9 +64,18 @@ function equation_full_curve(x, x_pivot, y_pivot, slope_pivot, toe_power, should
     return equation_curve(x, x_pivot, y_pivot, slope_pivot, toe_power, shoulder_power, scale);
 }
 
-function applyInsetTransform(rgb, slope, toe_power, shoulder_power, min_ev, max_ev)
+var adjusted_to_XYZ = ComputeCompressionMatrix(Utils.sRGB_Space.red, Utils.sRGB_Space.green, Utils.sRGB_Space.blue, Utils.sRGB_Space.white, 0.10);
+var XYZ_to_adjusted = adjusted_to_XYZ.clone().invert();
+
+export function setCompressionMatrix(compression)
 {
-    var xyz = rgb.applyMatrix3(sRGB_to_XYZ);
+    adjusted_to_XYZ = ComputeCompressionMatrix(Utils.sRGB_Space.red, Utils.sRGB_Space.green, Utils.sRGB_Space.blue, Utils.sRGB_Space.white, compression);
+    XYZ_to_adjusted = adjusted_to_XYZ.clone().invert();
+}
+
+export function applyTransform(rgb, slope, toe_power, shoulder_power, min_ev, max_ev)
+{
+    var xyz = rgb.applyMatrix3(Utils.sRGB_to_XYZ);
     var ajustedRGB = xyz.applyMatrix3(XYZ_to_adjusted);
 
     const x_pivot = Math.abs(min_ev) / (max_ev - min_ev);
