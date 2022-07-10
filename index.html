@@ -202,7 +202,7 @@
 						shoulder_power:3.1,
 						lerp:1,
 						useRatio:false,
-						ratio:0,
+						ratio:[0,0,0],
 						ortho:false};
 
 			var gui = new dat.GUI();
@@ -218,9 +218,9 @@
 				if(params.useRatio)
 				{
 					var ratio = new THREE.Vector3();
-					ratio.x = ((params.ratio & 0xFF0000) >> 16) / 255;
-					ratio.y = ((params.ratio & 0x00FF00) >> 8) / 255;
-					ratio.z = (params.ratio & 0x0000FF) / 255;
+					ratio.x = params.ratio[0];
+					ratio.y = params.ratio[1];
+					ratio.z = params.ratio[2];
 
 					samples = GenerateLine(ratio, substeps, start, range);
 				}
