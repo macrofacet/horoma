@@ -275,22 +275,26 @@
 
 			updateSamples();
 
-			gui.add(params, 'steps', 1, 20, 1).onChange(updateSamples);
-			gui.add(params, 'start', -20, 20, 1).onChange(updateSamples);
-			gui.add(params, 'range', 0, 20, 1).onChange(updateSamples);
-			gui.add(params, 'substeps', 0, 20, 1).onChange(updateSamples);
+			var generatorFolder = gui.addFolder("generator");
 
-			gui.add(params, 'useRatio').onChange(updateSamples);
-			gui.addColor(params, 'ratio').onChange(updateSamples);
+			generatorFolder.add(params, 'steps', 1, 20, 1).onChange(updateSamples);
+			generatorFolder.add(params, 'start', -20, 20, 1).onChange(updateSamples);
+			generatorFolder.add(params, 'range', 0, 20, 1).onChange(updateSamples);
+			generatorFolder.add(params, 'substeps', 0, 20, 1).onChange(updateSamples);
+
+			generatorFolder.add(params, 'useRatio').onChange(updateSamples);
+			generatorFolder.addColor(params, 'ratio').onChange(updateSamples);
 			
-			gui.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);
-			gui.add(params, 'min_ev', -20, 20, 1).onChange(updatePoint);
-			gui.add(params, 'max_ev', 0, 20, 1).onChange(updatePoint);
+			var algorithmFolder = gui.addFolder("algorithm");
+			algorithmFolder.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);
+			algorithmFolder.add(params, 'min_ev', -20, 20, 1).onChange(updatePoint);
+			algorithmFolder.add(params, 'max_ev', 0, 20, 1).onChange(updatePoint);
 
-			gui.add(params, 'slope', 0, 10, 0.01).onChange(updatePoint);
-			gui.add(params, 'toe_power', 0, 10, 0.01).onChange(updatePoint);
-			gui.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
+			algorithmFolder.add(params, 'slope', 0, 10, 0.01).onChange(updatePoint);
+			algorithmFolder.add(params, 'toe_power', 0, 10, 0.01).onChange(updatePoint);
+			algorithmFolder.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
 
+			
 			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updatePoint);
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updatePoint);
 
