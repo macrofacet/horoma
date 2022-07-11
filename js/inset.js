@@ -73,10 +73,14 @@ export function setCompressionMatrix(compression)
     XYZ_to_adjusted = adjusted_to_XYZ.clone().invert();
 }
 
+
+
 export function applyTransform(rgb, slope, toe_power, shoulder_power, min_ev, max_ev)
 {
-    var xyz = rgb.applyMatrix3(Utils.sRGB_to_XYZ);
-    var ajustedRGB = xyz.applyMatrix3(XYZ_to_adjusted);
+    var xyz = rgb.clone().applyMatrix3(Utils.sRGB_to_XYZ);
+    var ajustedRGB = xyz.clone().applyMatrix3(XYZ_to_adjusted);
+
+    ajustedRGB = ajustedRGB.clone().max(new THREE.Vector3(0, 0, 0));
 
     const x_pivot = Math.abs(min_ev) / (max_ev - min_ev);
     const y_pivot = 0.5;

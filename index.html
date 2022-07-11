@@ -285,26 +285,19 @@
 					var p = samples[s];
 					p.x = p.x * Math.pow(2, params.exposure);
 					p.y = p.y * Math.pow(2, params.exposure);
-					p.z = p.z * Math.pow(2, params.exposure);
+					p.z = p.z * Math.pow(2, params.exposure);					
 
 					var tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
 					
 					// Saturation
 					const wgt = new THREE.Vector3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
 					var des = tp.clone().dot(wgt);
-					tp.x = THREE.MathUtils.lerp(des, tp.x, params.saturation);
-					tp.y = THREE.MathUtils.lerp(des, tp.y, params.saturation);
-					tp.z = THREE.MathUtils.lerp(des, tp.z, params.saturation);
+					tp = new THREE.Vector3(des, des, des).lerp(tp, params.saturation);
 			
-					tp.x = Math.min(Math.max(tp.x, 0), 1);
-					tp.y = Math.min(Math.max(tp.y, 0), 1);
-					tp.z = Math.min(Math.max(tp.z, 0), 1);
+					tp.clampScalar(0, 1);
 
 					// Lerp between raw and image
-					var fp = new THREE.Vector3();
-					fp.x = THREE.MathUtils.lerp(p.x, tp.x, params.lerp);
-					fp.y = THREE.MathUtils.lerp(p.y, tp.y, params.lerp);
-					fp.z = THREE.MathUtils.lerp(p.z, tp.z, params.lerp);
+					var fp = p.clone().lerp(tp, params.lerp);				
 
 					positions.push(fp.x, fp.y, fp.z);
 				}
@@ -326,7 +319,7 @@
 			generatorFolder.add(params, 'steps', 1, 20, 1).onChange(updateSamples);
 			generatorFolder.add(params, 'start', -20, 20, 1).onChange(updateSamples);
 			generatorFolder.add(params, 'range', 0, 20, 1).onChange(updateSamples);
-			generatorFolder.add(params, 'substeps', 0, 20, 1).onChange(updateSamples);
+			generatorFolder.add(params, 'substeps', 1, 20, 1).onChange(updateSamples);
 
 			generatorFolder.addColor(params, 'ratio').onChange(updateSamples);
 
