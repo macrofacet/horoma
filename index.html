@@ -211,7 +211,7 @@
 						toe_power:1.9,
 						shoulder_power:3.1,
 						lerp:1,
-						useRatio:false,
+						generator:"generic",
 						ratio:[0,0,0],
 						ortho:false};
 
@@ -220,33 +220,37 @@
 			var samples = [];
 			function updateSamples()
 			{
+				samples.length = 0;
+				
 				const steps = params.steps;
 				const range = params.range;
 				const start = params.start;
 				const substeps = params.substeps;
 				
-				if(params.useRatio)
+				switch(params.generator)
 				{
+					case 'single':
 					var ratio = new THREE.Vector3();
 					ratio.x = params.ratio[0];
 					ratio.y = params.ratio[1];
 					ratio.z = params.ratio[2];
 
 					samples = Generator.GenerateLine(ratio, substeps, start, range);
-				}
-				else
-				{
-					samples = Generator.GenerateRamp(steps, substeps, start, range);
-				}
-
-				
-				/* 
-				//Use Image
-				for(var i = 0; i < sourceData.length; i+=4)
+					break;
+					
+					case 'image' :
+					for(var i = 0; i < sourceData.length; i+=4)
 					{
 						samples.push(new THREE.Vector3(sourceData[i], sourceData[i+1], sourceData[i+2]));
 					}
-				*/
+					break;
+
+					case 'generic':
+					default:
+						samples = Generator.GenerateRamp(steps, substeps, start, range);
+					break;
+
+				}
 
 				updatePoint();
 			}
@@ -295,14 +299,15 @@
 
 			var generatorFolder = gui.addFolder("generator");
 
+			generatorFolder.add(params, 'generator', ['generic', 'single', 'image']).onChange(updateSamples);
+
 			generatorFolder.add(params, 'steps', 1, 20, 1).onChange(updateSamples);
 			generatorFolder.add(params, 'start', -20, 20, 1).onChange(updateSamples);
 			generatorFolder.add(params, 'range', 0, 20, 1).onChange(updateSamples);
 			generatorFolder.add(params, 'substeps', 0, 20, 1).onChange(updateSamples);
 
-			generatorFolder.add(params, 'useRatio').onChange(updateSamples);
 			generatorFolder.addColor(params, 'ratio').onChange(updateSamples);
-			
+
 			var algorithmFolder = gui.addFolder("algorithm");
 			algorithmFolder.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);
 			algorithmFolder.add(params, 'min_ev', -20, 20, 1).onChange(updatePoint);
