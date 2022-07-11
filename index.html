@@ -115,6 +115,10 @@
 			import * as THREE from "three";
 			import { OrbitControls } from "https://cdn.skypack.dev/three@0.142.0/examples/jsm/controls/OrbitControls";
 			import { EXRLoader } from "https://cdn.skypack.dev/three@0.142.0/examples/jsm/loaders/EXRLoader";
+			
+			import { LUTCubeLoader } from 'https://cdn.skypack.dev/three@0.142.0/examples/jsm/loaders/LUTCubeLoader';
+			import { LUT3dlLoader } from 'https://cdn.skypack.dev/three@0.142.0/examples/jsm/loaders/LUT3dlLoader';
+
 			import dat from "https://cdn.skypack.dev/dat.gui";
 
 
@@ -138,6 +142,27 @@
 							images.bar = textureData.data;
 						});
 						
+
+			const lutMap = {
+				'Bourbon 64.CUBE': null,
+				'Chemical 168.CUBE': null,
+				'Presetpro-Cinematic.3dl': null
+			};
+
+			Object.keys( lutMap ).forEach( name => {
+
+					if ( /\.CUBE$/i.test( name ) ) {
+						new LUTCubeLoader()
+							.load( 'luts/' + name, function ( result ) {
+								lutMap[ name ] = result;
+							} );
+					} else {
+						new LUT3dlLoader()
+							.load( 'luts/' + name, function ( result ) {
+								lutMap[ name ] = result;
+							} );
+					}
+			});
 
 			var aspect = window.innerWidth / window.innerHeight;
 
@@ -208,22 +233,25 @@
 
 			// UI
 
-			var params = {compression:0, 
-						saturation:1,
+			var params = { 
+						generator:"generic",
 						steps:1,
 						start:-10,
 						range:20,
 						substeps:1,
+						ratio:[0,0,0],
+						image:"xmas",
+						exposure:0,
+						useLut:false,
+						lut:"Bourbon 64.CUBE",
+						compression:0,
 						min_ev:-10,
 						max_ev:7,
 						slope:2.5,
 						toe_power:1.9,
 						shoulder_power:3.1,
+						saturation:1,
 						lerp:1,
-						generator:"generic",
-						ratio:[0,0,0],
-						image:"xmas",
-						exposure:0,
 						ortho:false};
 
 			var gui = new dat.GUI();
@@ -285,10 +313,16 @@
 					var p = samples[s];
 					p.x = p.x * Math.pow(2, params.exposure);
 					p.y = p.y * Math.pow(2, params.exposure);
-					p.z = p.z * Math.pow(2, params.exposure);					
-
-					var tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
+					p.z = p.z * Math.pow(2, params.exposure);	
 					
+					if(params.useLut)
+					{
+						//var lut = lutMap[params.lut];
+					}
+					else
+					{
+						var tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
+					}
 					// Saturation
 					const wgt = new THREE.Vector3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
 					var des = tp.clone().dot(wgt);
@@ -336,6 +370,8 @@
 			algorithmFolder.add(params, 'toe_power', 0, 10, 0.01).onChange(updatePoint);
 			algorithmFolder.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updatePoint);
 
+			algorithmFolder.add(params, 'useLut').onChange(updatePoint);
+			algorithmFolder.add(params, 'lut', Object.keys( lutMap )).onChange(updatePoint);
 
 			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updatePoint);
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updatePoint);
