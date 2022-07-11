@@ -213,6 +213,7 @@
 						lerp:1,
 						generator:"generic",
 						ratio:[0,0,0],
+						exposure:0,
 						ortho:false};
 
 			var gui = new dat.GUI();
@@ -221,7 +222,7 @@
 			function updateSamples()
 			{
 				samples.length = 0;
-				
+
 				const steps = params.steps;
 				const range = params.range;
 				const start = params.start;
@@ -265,6 +266,10 @@
 				for ( let s = 0; s < samples.length; s ++ )
 				{
 					var p = samples[s];
+					p.x = p.x * Math.pow(2, params.exposure);
+					p.y = p.y * Math.pow(2, params.exposure);
+					p.z = p.z * Math.pow(2, params.exposure);
+
 					var tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
 					
 					// Saturation
@@ -308,7 +313,10 @@
 
 			generatorFolder.addColor(params, 'ratio').onChange(updateSamples);
 
+			
 			var algorithmFolder = gui.addFolder("algorithm");
+			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updatePoint);
+
 			algorithmFolder.add(params, 'compression', 0, 0.5, 0.0001).onChange(updatePoint);
 			algorithmFolder.add(params, 'min_ev', -20, 20, 1).onChange(updatePoint);
 			algorithmFolder.add(params, 'max_ev', 0, 20, 1).onChange(updatePoint);
