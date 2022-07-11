@@ -10,9 +10,7 @@
 	</head>
 	<body>
 		<div id="xyYView" style="display:inline-block"></div>
-
-		<canvas id="imgCanvas"></canvas>
-		
+	
 		<script type='x-shader/x-vertex' id='point_vs'>
 			
 			uniform mat3 convMatXYZ;	
@@ -124,12 +122,22 @@
 			import * as Generator from './js/generator.js'
 			import * as Inset from './js/inset.js'
 
-			var sourceData = new ArrayBuffer();
-			var loader = new EXRLoader();
-			loader.setDataType(THREE.FloatType);
-			loader.load( "./images/red_xmas_rec709.exr", function ( texture, textureData ) {
-							sourceData = textureData.data;
+			var images = {};
+
+			new EXRLoader().setDataType(THREE.FloatType)
+			.load( "./images/red_xmas_rec709.exr", function ( texture, textureData ) {
+							images.xmas = textureData.data;
 						});
+			new EXRLoader().setDataType(THREE.FloatType)
+			.load( "./images/mery_lightSaber_lin_srgb.exr", function ( texture, textureData ) {
+							images.lightsaber = textureData.data;
+						});
+
+			new EXRLoader().setDataType(THREE.FloatType)
+			.load( "./images/blue_bar_709.exr", function ( texture, textureData ) {
+							images.bar = textureData.data;
+						});
+						
 
 			var aspect = window.innerWidth / window.innerHeight;
 
@@ -214,6 +222,7 @@
 						lerp:1,
 						generator:"generic",
 						ratio:[0,0,0],
+						image:"xmas",
 						exposure:0,
 						ortho:false};
 
@@ -241,6 +250,13 @@
 					break;
 					
 					case 'image' :
+						var sourceData = null;
+						switch(params.image)
+						{
+							case "lightsaber": sourceData = images.lightsaber; break;
+							case "bar": sourceData = images.bar; break;
+							case "xmas": default: sourceData = images.xmas; break;
+						}
 					for(var i = 0; i < sourceData.length; i+=4)
 					{
 						samples.push(new THREE.Vector3(sourceData[i], sourceData[i+1], sourceData[i+2]));
@@ -314,6 +330,7 @@
 
 			generatorFolder.addColor(params, 'ratio').onChange(updateSamples);
 
+			generatorFolder.add(params, 'image', ['xmas', 'lightsaber', 'bar']).onChange(updateSamples);
 			
 			var algorithmFolder = gui.addFolder("algorithm");
 			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updatePoint);
