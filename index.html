@@ -7,6 +7,17 @@
 			body { margin: 0; }
 			canvas { width: 100%; height: 100% }
 		</style>
+		
+		<script async src="https://unpkg.com/es-module-shims@1.5.8/dist/es-module-shims.js"></script>
+		<script type="importmap">
+			{
+			  "imports": {
+				"three": "https://cdn.skypack.dev/three@0.142.0",
+				"three/": "https://cdn.skypack.dev/three@0.142.0/",
+				"dat.gui": "https://cdn.skypack.dev/dat.gui"
+			  }
+			}
+		  </script>
 	</head>
 	<body>
 		<div id="xyYView" style="display:inline-block"></div>
@@ -102,24 +113,16 @@
 				}
 			}
 		</script>
-		<script async src="https://unpkg.com/es-module-shims@1.5.8/dist/es-module-shims.js"></script>
-		<script type="importmap">
-			{
-			  "imports": {
-				"three": "https://cdn.skypack.dev/three@0.142.0"
-			  }
-			}
-		  </script>
 
 		<script type="module">
 			import * as THREE from "three";
-			import { OrbitControls } from "https://cdn.skypack.dev/three@0.142.0/examples/jsm/controls/OrbitControls";
-			import { EXRLoader } from "https://cdn.skypack.dev/three@0.142.0/examples/jsm/loaders/EXRLoader";
+			import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
+			import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader";
 			
-			import { LUTCubeLoader } from 'https://cdn.skypack.dev/three@0.142.0/examples/jsm/loaders/LUTCubeLoader';
-			import { LUT3dlLoader } from 'https://cdn.skypack.dev/three@0.142.0/examples/jsm/loaders/LUT3dlLoader';
+			import { LUTCubeLoader } from 'three/examples/jsm/loaders/LUTCubeLoader';
+			import { LUT3dlLoader } from 'three/examples/jsm/loaders/LUT3dlLoader';
 
-			import dat from "https://cdn.skypack.dev/dat.gui";
+			import dat from "dat.gui";
 
 
 			import * as Utils from './js/utils.js'
