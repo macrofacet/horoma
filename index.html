@@ -118,9 +118,6 @@
 			import * as THREE from "three";
 			import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 			import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader";
-			
-			import { LUTCubeLoader } from 'three/examples/jsm/loaders/LUTCubeLoader';
-			import { LUT3dlLoader } from 'three/examples/jsm/loaders/LUT3dlLoader';
 
 			import dat from "dat.gui";
 
@@ -128,6 +125,8 @@
 			import * as Utils from './js/utils.js'
 			import * as Generator from './js/generator.js'
 			import * as Inset from './js/inset.js'
+			
+			import * as Lut from './js/lut.js'
 
 			var images = {};
 
@@ -149,22 +148,14 @@
 			const lutMap = {
 				'Bourbon 64.CUBE': null,
 				'Chemical 168.CUBE': null,
-				'Presetpro-Cinematic.3dl': null
 			};
 
 			Object.keys( lutMap ).forEach( name => {
-
-					if ( /\.CUBE$/i.test( name ) ) {
-						new LUTCubeLoader()
-							.load( 'luts/' + name, function ( result ) {
-								lutMap[ name ] = result;
-							} );
-					} else {
-						new LUT3dlLoader()
-							.load( 'luts/' + name, function ( result ) {
-								lutMap[ name ] = result;
-							} );
-					}
+				const loader = new THREE.FileLoader();
+				loader.setResponseType('text');
+				loader.load('luts/' + name, text => {
+					lutMap[ name ] =  new Lut.LUTCubeParser().parse(text);
+				});
 			});
 
 			var aspect = window.innerWidth / window.innerHeight;
@@ -318,13 +309,22 @@
 					p.y = p.y * Math.pow(2, params.exposure);
 					p.z = p.z * Math.pow(2, params.exposure);	
 					
+					p.max(new THREE.Vector3(0, 0, 0));
+
+					var tp = new THREE.Vector3();
 					if(params.useLut)
 					{
-						//var lut = lutMap[params.lut];
+						var lut = lutMap[params.lut];
+						var lx = Utils.open_domain_to_normalized_log2(p.x, -10, 6.5);
+						var ly = Utils.open_domain_to_normalized_log2(p.y, -10, 6.5);
+						var lz = Utils.open_domain_to_normalized_log2(p.z, -10, 6.5);
+						var lp = new THREE.Vector3(lx, ly, lz);
+						lp.clampScalar(0, 1);
+						tp = lut.trilinear_lookup(lp);
 					}
 					else
 					{
-						var tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
+						tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
 					}
 					// Saturation
 					const wgt = new THREE.Vector3(0.2126729,  0.7151522,  0.0721750); // srgb luminance

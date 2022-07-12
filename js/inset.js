@@ -13,17 +13,6 @@ export function ComputeCompressionMatrix(xyR, xyG, xyB, xyW, compression)
 }
 
 
-function open_domain_to_normalized_log2(in_od, minimum_ev, maximum_ev)
-{
-    const in_middle_grey = 0.18;
-    var total_exposure = maximum_ev - minimum_ev;
-
-    var output_log = Math.min(maximum_ev, Math.max(minimum_ev, Math.log2(in_od / in_middle_grey)));
-    
-    return (output_log - minimum_ev) / total_exposure;
-}
-
-
 function equation_scale(x_pivot, y_pivot, slope_pivot, power)
 {
     return Math.pow(Math.pow((slope_pivot * x_pivot), -power) * (Math.pow((slope_pivot * (x_pivot / y_pivot)), power) - 1.0), -1.0 / power);
@@ -85,9 +74,9 @@ export function applyTransform(rgb, slope, toe_power, shoulder_power, min_ev, ma
     const x_pivot = Math.abs(min_ev) / (max_ev - min_ev);
     const y_pivot = 0.5;
 
-    var logR = open_domain_to_normalized_log2(ajustedRGB.x, min_ev, max_ev);
-    var logG = open_domain_to_normalized_log2(ajustedRGB.y, min_ev, max_ev);
-    var logB = open_domain_to_normalized_log2(ajustedRGB.z, min_ev, max_ev);
+    var logR = Utils.open_domain_to_normalized_log2(ajustedRGB.x, min_ev, max_ev);
+    var logG = Utils.open_domain_to_normalized_log2(ajustedRGB.y, min_ev, max_ev);
+    var logB = Utils.open_domain_to_normalized_log2(ajustedRGB.z, min_ev, max_ev);
 
     var outputR = equation_full_curve(logR, x_pivot, y_pivot, slope, toe_power, shoulder_power);
     var outputG = equation_full_curve(logG, x_pivot, y_pivot, slope, toe_power, shoulder_power);

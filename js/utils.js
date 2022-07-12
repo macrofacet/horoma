@@ -76,6 +76,16 @@ export function primaries_to_matrix(xy_red, xy_green, xy_blue, xy_white)
     return out;
 }
 
+export function open_domain_to_normalized_log2(in_od, minimum_ev, maximum_ev)
+{
+    const in_middle_grey = 0.18;
+    var total_exposure = maximum_ev - minimum_ev;
+
+    var output_log = Math.min(maximum_ev, Math.max(minimum_ev, Math.log2(in_od / in_middle_grey)));
+    
+    return (output_log - minimum_ev) / total_exposure;
+}
+
 export const sRGB_Space = {
     red : new THREE.Vector2(0.64,0.33),
     green : new THREE.Vector2(0.3,0.6),
