@@ -26,11 +26,30 @@
 			
 			uniform mat3 convMatXYZ;	
 			uniform vec2 whitePoint;
+
+			uniform float saturation;
+			uniform float rawlerp;
+			
 			varying vec3 vColorRGB;	
+
 			void main() {
-				vColorRGB = position;
+				vec3 vColor = position;
+
+
+				// Saturation
+				vec3 wgt = vec3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
+				vec3 des = vec3(dot(vColor, wgt));
+				vec3 sColor = mix(des, vColor, saturation);
+		
+				sColor = clamp(sColor, 0.f, 1.f);
+
+				// Lerp between raw and image
+				vec3 fp = mix(color, sColor, rawlerp);	
+
+				vColor = fp;
+
 			/*
-			 	vec3 xyz = convMatXYZ * vColorRGB;
+			 	vec3 xyz = convMatXYZ * vColor;
 				
 				float sum = xyz.x + xyz.y + xyz.z;
 				vec3 xyY = vec3(0, 0, 0);
@@ -47,9 +66,12 @@
 					xyY.z = xyz.y;
 				}
 			*/
-			  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+
+			  vec4 mvPosition = modelViewMatrix * vec4( vColor, 1.0 );
 			  gl_PointSize = 5.0;
 			  gl_Position = projectionMatrix * mvPosition;
+
+			  vColorRGB = vColor;
 			}
 		
 		  </script>
@@ -203,13 +225,17 @@
 			var pointCloudGeo = new THREE.BufferGeometry();
 
 			const positions = [];
+			const colors = [];
 			pointCloudGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+			pointCloudGeo.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 			pointCloudGeo.computeBoundingSphere();
 
 			// uniforms
 			var uniforms = {
 				convMatXYZ: { value: Utils.sRGB_to_XYZ },
-				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) }
+				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
+				saturation: {value: 1.0},
+				rawlerp:{value:1.0}
 			};
 
 			// point cloud material
@@ -218,6 +244,7 @@
 				vertexShader:   document.getElementById( 'point_vs' ).textContent,
 				fragmentShader: document.getElementById( 'point_fs' ).textContent,
 				transparent:  true,
+				vertexColors: true
 			});
 
 			var point_xyY = new THREE.Points(pointCloudGeo, pointShaderMaterial);
@@ -295,12 +322,18 @@
 				updatePoint();
 			}
 
+			function updateUniforms()
+			{
+				pointShaderMaterial.uniforms.rawlerp.value = params.lerp;
+				pointShaderMaterial.uniforms.saturation.value = params.saturation;
+			}
 			
 			function updatePoint()
 			{	
 				Inset.setCompressionMatrix(params.compression);
 				
 				const positions = [];
+				const colors = [];
 				
 				for ( let s = 0; s < samples.length; s ++ )
 				{
@@ -309,6 +342,8 @@
 					p.y = p.y * Math.pow(2, params.exposure);
 					p.z = p.z * Math.pow(2, params.exposure);	
 					
+					colors.push(p.x, p.y, p.z);
+
 					p.max(new THREE.Vector3(0, 0, 0));
 
 					var tp = new THREE.Vector3();
@@ -326,20 +361,12 @@
 					{
 						tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
 					}
-					// Saturation
-					const wgt = new THREE.Vector3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
-					var des = tp.clone().dot(wgt);
-					tp = new THREE.Vector3(des, des, des).lerp(tp, params.saturation);
-			
-					tp.clampScalar(0, 1);
 
-					// Lerp between raw and image
-					var fp = p.clone().lerp(tp, params.lerp);				
-
-					positions.push(fp.x, fp.y, fp.z);
+					positions.push(tp.x, tp.y, tp.z);
 				}
 
 				pointCloudGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+				pointCloudGeo.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 				pointCloudGeo.computeBoundingSphere();
 
 				for (var i in gui.__controllers) {
@@ -376,8 +403,8 @@
 			algorithmFolder.add(params, 'useLut').onChange(updatePoint);
 			algorithmFolder.add(params, 'lut', Object.keys( lutMap )).onChange(updatePoint);
 
-			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updatePoint);
-			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updatePoint);
+			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updateUniforms);
+			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updateUniforms);
 
 			
 			
