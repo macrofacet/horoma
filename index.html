@@ -80,7 +80,10 @@
 			varying vec3 vColorRGB;	
 		
 			void main() {
-			  gl_FragColor = vec4( vColorRGB, 1 );
+				if (dot(gl_PointCoord-0.5,gl_PointCoord-0.5)>0.25)
+					discard;
+				else
+			  		gl_FragColor = vec4( vColorRGB, 1 );
 			}
 		  </script>
 
