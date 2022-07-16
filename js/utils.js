@@ -94,3 +94,13 @@ export const sRGB_Space = {
 }
 
 export const sRGB_to_XYZ = primaries_to_matrix(sRGB_Space.red, sRGB_Space.green, sRGB_Space.blue, sRGB_Space.white);
+
+
+export const Rec2020_Space = {
+    red : new THREE.Vector2(0.708,0.292),
+    green : new THREE.Vector2(0.170,0.797),
+    blue : new THREE.Vector2(0.131,0.046), 
+    white : new THREE.Vector2(0.3127, 0.3290)
+}
+
+export const Rec2020_to_XYZ = primaries_to_matrix(Rec2020_Space.red, Rec2020_Space.green, Rec2020_Space.blue, Rec2020_Space.white);
