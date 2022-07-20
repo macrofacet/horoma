@@ -157,16 +157,17 @@
 			uniform mat3 convMatXYZ;	
 			uniform vec2 whitePoint;
 
-			uniform float saturation;
-			uniform float rawlerp;
-			
+			uniform float exposure;
+
 			uniform float compression;
-			
 			uniform float min_ev;
 			uniform float max_ev;
 			uniform float slope;
 			uniform float toe_power;
 			uniform float shoulder_power;
+			
+			uniform float saturation;
+			uniform float rawlerp;
 
 			varying vec3 vColorRGB;	
 
@@ -174,6 +175,7 @@
 			void main() {
 				vec3 vColor = max(color, 0.0f);
 
+				vColor *= pow(2.0f, exposure);
 				// AgX
 				float3x3 sRGB_to_XYZ = primaries_to_matrix(float2(0.64,0.33),
 													float2(0.3,0.6), 
@@ -414,6 +416,7 @@
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
 				saturation: {value: 1.0},
 				rawlerp:{value:1.0},
+				exposure:{value:1.0},
 				compression:{value:0.17},
 				min_ev:{value:-10.0},
 				max_ev:{value:6.5},
@@ -508,9 +511,7 @@
 
 			function updateUniforms()
 			{
-				pointShaderMaterial.uniforms.rawlerp.value = params.lerp;
-				pointShaderMaterial.uniforms.saturation.value = params.saturation;
-
+				pointShaderMaterial.uniforms.exposure.value = params.exposure;
 				
 				pointShaderMaterial.uniforms.compression.value = params.compression;
 				pointShaderMaterial.uniforms.min_ev.value = params.min_ev;
@@ -519,6 +520,8 @@
 				pointShaderMaterial.uniforms.toe_power.value = params.toe_power;
 				pointShaderMaterial.uniforms.shoulder_power.value = params.shoulder_power;
 
+				pointShaderMaterial.uniforms.rawlerp.value = params.lerp;
+				pointShaderMaterial.uniforms.saturation.value = params.saturation;
 			}
 			
 			function updatePoint()
@@ -584,7 +587,7 @@
 			generatorFolder.add(params, 'image', ['xmas', 'lightsaber', 'bar']).onChange(updateSamples);
 			
 			var algorithmFolder = gui.addFolder("algorithm");
-			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updatePoint);
+			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updateUniforms);
 
 			algorithmFolder.add(params, 'compression', 0, 0.5, 0.0001).onChange(updateUniforms);
 			algorithmFolder.add(params, 'min_ev', -20, 20, 1).onChange(updateUniforms);
