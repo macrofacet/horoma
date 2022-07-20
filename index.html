@@ -32,10 +32,30 @@
 			
 			varying vec3 vColorRGB;	
 
+			vec3 curve_lookup(vec3 ratio, float power)
+			{
+				vec3 p0 = vec3(0,0,0);
+				vec3 p1 = ratio;
+				vec3 p2 = vec3(1,1,1);
+
+				float alpha = power / (power + 1.f);
+
+				if(alpha < 0.5)
+					return mix(p0, p1, alpha / 0.5);
+				else
+					return mix(p1, p2, (alpha - 0.5) / 0.5);
+				
+			}
+
 			void main() {
-				vec3 vColor = position;
+				vec3 vColor = normalize(position);
 
+				float power = max(position.x, max(position.y, position.z));
+				vec3 ratio = position / power;
 
+				vColor = curve_lookup(ratio, power);
+
+				/*
 				// Saturation
 				vec3 wgt = vec3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
 				vec3 des = vec3(dot(vColor, wgt));
@@ -45,8 +65,8 @@
 
 				// Lerp between raw and image
 				vec3 fp = mix(color, sColor, rawlerp);	
-
-				vColor = fp;
+				
+				vColor = fp;*/
 
 			/*
 			 	vec3 xyz = convMatXYZ * vColor;
@@ -87,6 +107,53 @@
 			}
 		  </script>
 
+		  <script  type="x-shader/x-vertex" id="image_vs">
+			varying vec2 vUv;
+
+			void main() {
+				vUv = uv;
+				gl_Position =  projectionMatrix * modelViewMatrix * vec4(position,1.0);
+			}
+		</script>
+
+		<script  type="x-shader/x-vertex" id="image_ps">
+			uniform sampler2D tex;
+			uniform float exposure;
+			uniform float saturation;
+			varying vec2 vUv;
+
+			vec3 curve_lookup(vec3 ratio, float power)
+			{
+				vec3 p0 = vec3(0,0,0);
+				vec3 p1 = ratio;
+				vec3 p2 = vec3(1,1,1);
+
+				float alpha = power / (power + 1.f);
+
+				if(alpha < 0.5)
+					return mix(p0, p1, alpha / 0.5);
+				else
+					return mix(p1, p2, (alpha - 0.5) / 0.5);
+				
+			}
+
+			void main() {
+				vec3 tristimulus = texture2D(tex, vUv).rgb;
+				tristimulus *= pow(2.0, exposure);
+
+				//tristimulus = pow(tristimulus, vec3(1.2));
+
+				// Saturation
+				vec3 wgt = vec3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
+				vec3 des = vec3(dot(tristimulus, wgt));
+				tristimulus = mix(des, tristimulus, saturation);
+
+				float power = max(tristimulus.x, max(tristimulus.y, tristimulus.z));
+				vec3 ratio = tristimulus / power;
+
+				gl_FragColor = vec4(curve_lookup(ratio, power), 1);
+			}
+		</script>
 
 		<script type="x-shader/x-vertex" id="vertexShader">
 			uniform mat3 convMatXYZ;
@@ -155,16 +222,16 @@
 
 			var images = {};
 
-			new EXRLoader().setDataType(THREE.FloatType)
+			var xmas_loader = new EXRLoader().setDataType(THREE.FloatType)
 			.load( "./images/red_xmas_rec709.exr", function ( texture, textureData ) {
 							images.xmas = textureData.data;
 						});
-			new EXRLoader().setDataType(THREE.FloatType)
+			var lightsaber_loader = new EXRLoader().setDataType(THREE.FloatType)
 			.load( "./images/mery_lightSaber_lin_srgb.exr", function ( texture, textureData ) {
 							images.lightsaber = textureData.data;
 						});
 
-			new EXRLoader().setDataType(THREE.FloatType)
+			var bluebar_loader = new EXRLoader().setDataType(THREE.FloatType)
 			.load( "./images/blue_bar_709.exr", function ( texture, textureData ) {
 							images.bar = textureData.data;
 						});
@@ -218,6 +285,22 @@
 
 			var axesHelper = new THREE.AxesHelper( 1 );
 			xyYscene.add( axesHelper );
+
+			var quad_mat = new THREE.ShaderMaterial( {
+			uniforms: {
+				tex: {value: lightsaber_loader, type:"t"},
+				exposure: {value:0},
+				saturation:{value:1}
+			},
+			depthTest: false,
+			vertexShader: document.getElementById( 'image_vs' ).textContent,
+			fragmentShader: document.getElementById( 'image_ps' ).textContent
+			} );
+
+			const quad = new THREE.PlaneGeometry( 1, 1 );
+			const mesh = new THREE.Mesh( quad, quad_mat );
+			mesh.position.x = -1.5;
+			xyYscene.add( mesh );
 
 			var size = 10;
 			var divisions = 10;
@@ -276,6 +359,7 @@
 						shoulder_power:3.1,
 						saturation:1,
 						lerp:1,
+						img_exp:0,
 						ortho:false};
 
 			var gui = new dat.GUI();
@@ -303,16 +387,20 @@
 					
 					case 'image' :
 						var sourceData = null;
+						var loader = null;
 						switch(params.image)
 						{
-							case "lightsaber": sourceData = images.lightsaber; break;
-							case "bar": sourceData = images.bar; break;
-							case "xmas": default: sourceData = images.xmas; break;
+							case "lightsaber": sourceData = images.lightsaber; loader = lightsaber_loader; break;
+							case "bar": sourceData = images.bar; loader = bluebar_loader; break;
+							case "xmas": default: sourceData = images.xmas; loader = xmas_loader; break;
 						}
-					for(var i = 0; i < sourceData.length; i+=4)
-					{
-						samples.push(new THREE.Vector3(sourceData[i], sourceData[i+1], sourceData[i+2]));
-					}
+						quad_mat.uniforms.tex.value = loader;
+						mesh.scale.x = loader.source.data.width/loader.source.data.height;
+
+						for(var i = 0; i < sourceData.length; i+=4)
+						{
+							samples.push(new THREE.Vector3(sourceData[i], sourceData[i+1], sourceData[i+2]));
+						}
 					break;
 
 					case 'generic':
@@ -329,6 +417,8 @@
 			{
 				pointShaderMaterial.uniforms.rawlerp.value = params.lerp;
 				pointShaderMaterial.uniforms.saturation.value = params.saturation;
+				quad_mat.uniforms.exposure.value = params.img_exp;
+				quad_mat.uniforms.saturation.value = params.saturation;
 			}
 			
 			function updatePoint()
@@ -348,7 +438,8 @@
 					colors.push(p.x, p.y, p.z);
 
 					p.max(new THREE.Vector3(0, 0, 0));
-
+					
+					/*
 					var tp = new THREE.Vector3();
 					if(params.useLut)
 					{
@@ -364,8 +455,9 @@
 					{
 						tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
 					}
+					*/
 
-					positions.push(tp.x, tp.y, tp.z);
+					positions.push(p.x, p.y, p.z);
 				}
 
 				pointCloudGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
@@ -409,6 +501,7 @@
 			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updateUniforms);
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updateUniforms);
 
+			gui.add(params, 'img_exp', -10, 10, 0.01).onChange(updateUniforms);
 			
 			
 			function render() {
