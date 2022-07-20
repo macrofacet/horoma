@@ -242,51 +242,13 @@
 					xyY.y = whitePoint.y;
 					xyY.z = xyz.y;
 				}
-				*/
-			  vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+			*/
+
+			  vec4 mvPosition = modelViewMatrix * vec4( vColor, 1.0 );
 			  gl_PointSize = 5.0;
 			  gl_Position = projectionMatrix * mvPosition;
 
 			  vColorRGB = vColor;
-			}
-		
-		  </script>
-
-		  <script type='x-shader/x-vertex' id='point_vs_laser'>
-			
-			uniform mat3 convMatRGB;
-			uniform mat3 convMatXYZ;	
-			uniform vec2 whitePoint;
-			varying vec3 vColorRGB;	
-			void main() {
-				vec3 laserRadiance = color;
-
-				float X = laserRadiance.r * 0.6424 + laserRadiance.g * 0.18914 	+ laserRadiance.b * 0.2298512;
-				float Y = laserRadiance.r * 0.265 	+ laserRadiance.g * 0.8849624 	+ laserRadiance.b * 0.0802664;
-				float Z = laserRadiance.r * 0.00005 + laserRadiance.g * 0.03693564 	+ laserRadiance.b * 1.4395215;
-				vec3 xyz = vec3(X, Y, Z);
-				vColorRGB = convMatRGB * xyz;
-				//vec3 xyz = convMatXYZ * color;
-				//vColorRGB = color;
-
-				float sum = xyz.x + xyz.y + xyz.z;
-				vec3 xyY = vec3(0, 0, 0);
-				if(sum != 0.0)
-				{
-					xyY.x = xyz.x / sum;
-					xyY.y = xyz.y / sum;
-					xyY.z = xyz.y;
-				}
-				else
-				{
-					xyY.x = whitePoint.x;
-					xyY.y = whitePoint.y;
-					xyY.z = xyz.y;
-				}
-			
-			  vec4 mvPosition = modelViewMatrix * vec4( xyY, 1.0 );
-			  gl_PointSize = 5.0;
-			  gl_Position = projectionMatrix * mvPosition;
 			}
 		
 		  </script>
@@ -402,14 +364,11 @@
 
 			var xyYscene = new THREE.Scene();
 			xyYscene.background = new THREE.Color( "rgb(127,127,127)" );
+			var frustumSize = 2;
 			
 			var perspCamera_xyY = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
 			perspCamera_xyY.position.z = 5;
-
-			const frustumSize = 2;
-			const orthoCamera_xyY = new THREE.OrthographicCamera( frustumSize * aspect / - 2, frustumSize * aspect / 2, frustumSize / 2, frustumSize / - 2, 1, 1000 );
-			orthoCamera_xyY.position.z = 5;
-
+			
 			var xyYrenderer = new THREE.WebGLRenderer();
 			xyYrenderer.setSize( window.innerWidth, window.innerHeight );
 			document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
@@ -418,9 +377,9 @@
 
 			var material709_xyY = new THREE.ShaderMaterial( {
 			uniforms: {
-				convMatXYZ: { value: Utils.Rec2020_to_XYZ },
+				convMatXYZ: { value: Utils.sRGB_to_XYZ },
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-				opacity: {value: 0.3}
+				opacity: {value: 0.1}
 			},
 			depthTest: false,
 			vertexShader: document.getElementById( 'vertexShader' ).textContent,
@@ -428,11 +387,11 @@
 			} );
 
 			material709_xyY.transparent = true;
-			material709_xyY.opacity = 1;
+			material709_xyY.opacity = 0.1;
 
 			var cube709_xyY = new THREE.Mesh( boxGeo, material709_xyY );
 			cube709_xyY.renderOrder = 0;
-			xyYscene.add(cube709_xyY);
+			//xyYscene.add(cube709_xyY);
 
 			var axesHelper = new THREE.AxesHelper( 1 );
 			xyYscene.add( axesHelper );
@@ -453,8 +412,7 @@
 
 			// uniforms
 			var uniforms = {
-				convMatRGB: { value: Utils.Rec2020_to_XYZ.clone().invert() },
-				convMatXYZ: { value: Utils.Rec2020_to_XYZ },
+				convMatXYZ: { value: Utils.sRGB_to_XYZ },
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
 				saturation: {value: 1.0},
 				rawlerp:{value:1.0},
@@ -470,7 +428,7 @@
 			// point cloud material
 			var pointShaderMaterial = new THREE.ShaderMaterial( {
 				uniforms:     uniforms,
-				vertexShader:   document.getElementById( 'point_vs_laser' ).textContent,
+				vertexShader:   document.getElementById( 'point_vs' ).textContent,
 				fragmentShader: document.getElementById( 'point_fs' ).textContent,
 				transparent:  true,
 				vertexColors: true
@@ -598,7 +556,7 @@
 					else
 					{
 						tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
-					}			
+					}
 
 					positions.push(tp.x, tp.y, tp.z);
 				}
@@ -650,7 +608,7 @@
 			function render() {
 				
 				requestAnimationFrame( render );
-				xyYrenderer.render( xyYscene, orthoCamera_xyY );
+				xyYrenderer.render( xyYscene, perspCamera_xyY );
 
 			}
 
@@ -661,12 +619,6 @@
 			function onWindowResize(){
 
 				var aspect = (window.innerWidth) / window.innerHeight;
-
-				orthoCamera_xyY.left = - frustumSize * aspect / 2;
-				orthoCamera_xyY.right = frustumSize * aspect / 2;
-				orthoCamera_xyY.top = frustumSize / 2;
-				orthoCamera_xyY.bottom = - frustumSize / 2;
-				orthoCamera_xyY.updateProjectionMatrix();
 
 				perspCamera_xyY.aspect = aspect;
 			    perspCamera_xyY.updateProjectionMatrix();
