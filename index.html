@@ -267,12 +267,12 @@
 				saturation: {value: 1.0},
 				rawlerp:{value:1.0},
 				exposure:{value:1.0},
-				compression:{value:0.17},
+				compression:{value:0.20},
 				min_ev:{value:-10.0},
 				max_ev:{value:6.5},
-				slope:{value:2.3},
-				toe_power:{value:1.9},
-				shoulder_power:{value:3.1}
+				slope:{value:2.5},
+				toe_power:{value:3},
+				shoulder_power:{value:3.25}
 			};
 
 			// point cloud material
@@ -302,12 +302,12 @@
 						exposure:0,
 						useLut:false,
 						lut:"Bourbon 64.CUBE",
-						compression:0,
+						compression:0.20,
 						min_ev:-10,
-						max_ev:7,
-						slope:2.5,
-						toe_power:1.9,
-						shoulder_power:3.1,
+						max_ev:6.5,
+						slope:2,
+						toe_power:3,
+						shoulder_power:3.25,
 						saturation:1,
 						lerp:1,
 						img_exp:0,
@@ -457,8 +457,8 @@
 			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updateUniforms);
 
 			algorithmFolder.add(params, 'compression', 0, 0.5, 0.0001).onChange(updateUniforms);
-			algorithmFolder.add(params, 'min_ev', -20, 20, 1).onChange(updateUniforms);
-			algorithmFolder.add(params, 'max_ev', 0, 20, 1).onChange(updateUniforms);
+			algorithmFolder.add(params, 'min_ev', -20, 20, 0.1).onChange(updateUniforms);
+			algorithmFolder.add(params, 'max_ev', 0, 20, 0.1).onChange(updateUniforms);
 
 			algorithmFolder.add(params, 'slope', 0, 10, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'toe_power', 0, 10, 0.01).onChange(updateUniforms);
