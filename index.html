@@ -39,7 +39,8 @@
 				
 				vColor = apply_agx(vColor, compression);
 				vColor = apply_saturation(vColor, saturation);
-				
+				vColor = clamp(vColor, 0.0, 1.0);
+
 				// Lerp between raw and image
 				vColor = mix(color, vColor, rawlerp);
 
@@ -86,6 +87,7 @@
 				vColor *= pow(2.0f, exposure);				
 				vColor = apply_agx(vColor, compression);
 				vColor = apply_saturation(vColor, saturation);
+				vColor = clamp(vColor, 0.0, 1.0);
 
 				gl_FragColor = vec4(vColor, 1);
 			}
