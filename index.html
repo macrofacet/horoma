@@ -4,8 +4,34 @@
 		<meta charset=utf-8>
 		<title>Horoma - Color Explorer</title>
 		<style>
-			body { margin: 0; }
+			html, body { margin: 0; height:100% }
 			canvas { width: 100%; height: 100% }
+
+			#container {
+				display:flex;
+				flex-direction: column;
+				height: 100%;
+				min-height: 100%;
+			}
+
+			.row {
+				flex:1;
+				display:flex;
+				flex-direction:row;
+			}
+
+			#top {
+				flex: 2;
+			}
+
+			#bottom {
+				flex: 1;
+			}
+
+			.row > div {
+				flex : 1;
+			}	
+			
 		</style>
 		
 		<script async src="https://unpkg.com/es-module-shims@1.5.8/dist/es-module-shims.js"></script>
@@ -20,8 +46,16 @@
 		  </script>
 	</head>
 	<body>
-		<div id="xyYView" style="display:inline-block"></div>
-	
+		<div id="container">
+			<div id="top" class="row">
+				<div id="imageView" style="background-color:blue">image</div>
+				<!--<div id="controls" style="border:1px solid black"></div>-->
+			</div>
+			<div id="bottom" class="row">
+				<div id="xyYView" style="background-color:red">xyY</div>
+				<div id="XYZView" style="background-color:yellow">xyZ</div>
+			</div>
+		</div>
 		<script type='x-shader/x-vertex' id='point_vs'>
 			
 			uniform float exposure;			
@@ -190,7 +224,7 @@
 				});
 			});
 
-			var aspect = window.innerWidth / window.innerHeight;
+			var aspect = 1.0;
 
 			var xyYscene = new THREE.Scene();
 			xyYscene.background = new THREE.Color( "rgb(127,127,127)" );
@@ -198,10 +232,27 @@
 			
 			var perspCamera_xyY = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
 			perspCamera_xyY.position.z = 5;
+
+			var perspCamera_Image = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
+			perspCamera_Image.position.z = 5;
 			
 			var xyYrenderer = new THREE.WebGLRenderer();
-			xyYrenderer.setSize( window.innerWidth, window.innerHeight );
-			document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
+			//xyYrenderer.setSize( 512, 512 );
+			//document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
+
+			var XYZrenderer = new THREE.WebGLRenderer();
+			//XYZrenderer.setSize( 512, 512 );
+			//document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
+
+			var XYZscene = new THREE.Scene();
+			XYZscene.background = new THREE.Color( "rgb(127,127,127)" );
+
+			var ImageRenderer = new THREE.WebGLRenderer();
+			//ImageRenderer.setSize( 1024, 512 );
+			//document.getElementById("imageView").appendChild( ImageRenderer.domElement );
+
+			var ImageScene = new THREE.Scene();
+			ImageScene.background = new THREE.Color( "rgb(127,127,127)" );
 
 			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
 
@@ -474,11 +525,42 @@
 
 			gui.add(params, 'img_exp', -10, 10, 0.01).onChange(updateUniforms);
 			
-			
+			function resizeRendererToDisplaySize(renderer) {
+				const canvas = renderer.domElement;
+				const width = canvas.clientWidth;
+				const height = canvas.clientHeight;
+				console.log(width, height);
+				const needResize = canvas.width !== width || canvas.height !== height;
+				if (needResize) {
+					//renderer.setSize(width, height, false);
+				}
+				return needResize;
+			}
+
 			function render() {
 				
 				requestAnimationFrame( render );
+
+				if (resizeRendererToDisplaySize(ImageRenderer))
+				{
+					const canvas = ImageRenderer.domElement;
+					perspCamera_Image.aspect = canvas.clientWidth / canvas.clientHeight;
+					perspCamera_Image.updateProjectionMatrix();
+				}
+
+				if (resizeRendererToDisplaySize(xyYrenderer))
+				{
+
+				}
+
+				if (resizeRendererToDisplaySize(XYZrenderer))
+				{
+					
+				}
+				
+				ImageRenderer.render( ImageScene, perspCamera_Image );
 				xyYrenderer.render( xyYscene, perspCamera_xyY );
+				XYZrenderer.render( XYZscene, perspCamera_xyY );
 
 			}
 
@@ -490,9 +572,9 @@
 
 				var aspect = (window.innerWidth) / window.innerHeight;
 
-				perspCamera_xyY.aspect = aspect;
-			    perspCamera_xyY.updateProjectionMatrix();
-			    xyYrenderer.setSize( window.innerWidth, window.innerHeight );
+				//perspCamera_xyY.aspect = aspect;
+			    //perspCamera_xyY.updateProjectionMatrix();
+			    //xyYrenderer.setSize( window.innerWidth, window.innerHeight );
 			}
 		</script>
 	</body>
