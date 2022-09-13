@@ -5,7 +5,7 @@
 		<title>Horoma - Color Explorer</title>
 		<style>
 			html, body { margin: 0; height:100% }
-			canvas { width: 100%; height: 100% }
+			canvas { /*width: 100%; height: 100%;*/ }
 
 			#container {
 				display:flex;
@@ -30,6 +30,8 @@
 
 			.row > div {
 				flex : 1;
+				display:flex;
+				flex-direction:column;
 			}	
 			
 		</style>
@@ -48,12 +50,14 @@
 	<body>
 		<div id="container">
 			<div id="top" class="row">
-				<div id="imageView" style="background-color:blue">image</div>
+				<div id="imageView" style="background-color:blue">
+					<canvas id="imageCanvas" style="background-color:aqua"></canvas>
+				</div>
 				<!--<div id="controls" style="border:1px solid black"></div>-->
 			</div>
 			<div id="bottom" class="row">
-				<div id="xyYView" style="background-color:red">xyY</div>
-				<div id="XYZView" style="background-color:yellow">xyZ</div>
+				<div id="xyYView" style="background-color:red"></div>
+				<div id="XYZView" style="background-color:yellow"></div>
 			</div>
 		</div>
 		<script type='x-shader/x-vertex' id='point_vs'>
@@ -226,33 +230,37 @@
 
 			var aspect = 1.0;
 
+			// xyY Scene
 			var xyYscene = new THREE.Scene();
-			xyYscene.background = new THREE.Color( "rgb(127,127,127)" );
-			var frustumSize = 2;
+			xyYscene.background = new THREE.Color( "rgb(127,0,0)" );
+			
+			var xyYrenderer = new THREE.WebGLRenderer();
+			//document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
 			
 			var perspCamera_xyY = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
 			perspCamera_xyY.position.z = 5;
 
-			var perspCamera_Image = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
-			perspCamera_Image.position.z = 5;
-			
-			var xyYrenderer = new THREE.WebGLRenderer();
-			//xyYrenderer.setSize( 512, 512 );
-			//document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
+			// XYZ Scene
+			var XYZscene = new THREE.Scene();
+			XYZscene.background = new THREE.Color( "rgb(0,0,127)" );
 
 			var XYZrenderer = new THREE.WebGLRenderer();
-			//XYZrenderer.setSize( 512, 512 );
 			//document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
-
-			var XYZscene = new THREE.Scene();
-			XYZscene.background = new THREE.Color( "rgb(127,127,127)" );
-
+			
+			var perspCamera_XYZ = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
+			perspCamera_XYZ.position.z = 5;
+			
+			// Image Scene
 			var ImageRenderer = new THREE.WebGLRenderer();
-			//ImageRenderer.setSize( 1024, 512 );
 			//document.getElementById("imageView").appendChild( ImageRenderer.domElement );
 
 			var ImageScene = new THREE.Scene();
-			ImageScene.background = new THREE.Color( "rgb(127,127,127)" );
+			ImageScene.background = new THREE.Color( "rgb(0,127,0)" );			
+
+			var perspCamera_Image = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
+			perspCamera_Image.position.z = 5;
+
+			// ----
 
 			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
 
@@ -525,42 +533,27 @@
 
 			gui.add(params, 'img_exp', -10, 10, 0.01).onChange(updateUniforms);
 			
-			function resizeRendererToDisplaySize(renderer) {
+			function resizeRendererToDisplaySize(renderer, camera, container) {
 				const canvas = renderer.domElement;
 				const width = canvas.clientWidth;
 				const height = canvas.clientHeight;
-				console.log(width, height);
-				const needResize = canvas.width !== width || canvas.height !== height;
-				if (needResize) {
-					//renderer.setSize(width, height, false);
+				if (canvas.width !== width || canvas.height !== height) {
+					renderer.setSize(width, height, false);
+					camera.aspect = width / height;
+					camera.updateProjectionMatrix();
 				}
-				return needResize;
 			}
 
 			function render() {
 				
 				requestAnimationFrame( render );
-
-				if (resizeRendererToDisplaySize(ImageRenderer))
-				{
-					const canvas = ImageRenderer.domElement;
-					perspCamera_Image.aspect = canvas.clientWidth / canvas.clientHeight;
-					perspCamera_Image.updateProjectionMatrix();
-				}
-
-				if (resizeRendererToDisplaySize(xyYrenderer))
-				{
-
-				}
-
-				if (resizeRendererToDisplaySize(XYZrenderer))
-				{
-					
-				}
+				//resizeRendererToDisplaySize(ImageRenderer, perspCamera_Image, document.getElementById("imageView"));
+				//resizeRendererToDisplaySize(xyYrenderer, perspCamera_xyY, document.getElementById("xyYView"));
+				//resizeRendererToDisplaySize(XYZrenderer, perspCamera_XYZ, document.getElementById("XYZView"));
 				
 				ImageRenderer.render( ImageScene, perspCamera_Image );
 				xyYrenderer.render( xyYscene, perspCamera_xyY );
-				XYZrenderer.render( XYZscene, perspCamera_xyY );
+				XYZrenderer.render( XYZscene, perspCamera_XYZ );
 
 			}
 
