@@ -138,6 +138,7 @@
 			uniform mat3 convMatXYZ;
 			uniform vec2 whitePoint;
 			varying vec3 vColorRGB;
+			uniform bool to_xyY;
 			void main() {
 
 				vec3 pos = position;
@@ -145,21 +146,26 @@
  
 				vec3 xyz = convMatXYZ * rgb;
 				vec3 position;
-				float sum = xyz.x + xyz.y + xyz.z;
-				vec3 xyY = vec3(0, 0, 0);
-				if(sum != 0.0)
+				if(to_xyY)
 				{
-					xyY.x = xyz.x / sum;
-					xyY.y = xyz.y / sum;
-					xyY.z = xyz.y;
+					float sum = xyz.x + xyz.y + xyz.z;
+					vec3 xyY = vec3(0, 0, 0);
+					if(sum != 0.0)
+					{
+						xyY.x = xyz.x / sum;
+						xyY.y = xyz.y / sum;
+						xyY.z = xyz.y;
+					}
+					else
+					{
+						xyY.x = whitePoint.x;
+						xyY.y = whitePoint.y;
+						xyY.z = xyz.y;
+					}
+					position = xyY.xzy;
+				} else {
+					position = xyz;
 				}
-				else
-				{
-					xyY.x = whitePoint.x;
-					xyY.y = whitePoint.y;
-					xyY.z = xyz.y;
-				}
-				position = xyY;
 
 				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
 				gl_Position = projectionMatrix * mvPosition;
@@ -235,59 +241,37 @@
 
 			// xyY Scene
 			var xyYscene = new THREE.Scene();
-			xyYscene.background = new THREE.Color( "rgb(127,0,0)" );
+			xyYscene.background = new THREE.Color( "rgb(0,0,0)" );
 			
 			var xyYrenderer = new THREE.WebGLRenderer();
 			document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
 			
 			var perspCamera_xyY = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
-			perspCamera_xyY.position.z = 5;
+			perspCamera_xyY.position.z = 3;
 
 			// XYZ Scene
 			var XYZscene = new THREE.Scene();
-			XYZscene.background = new THREE.Color( "rgb(0,0,127)" );
+			XYZscene.background = new THREE.Color( "rgb(0,0,0)" );
 
 			var XYZrenderer = new THREE.WebGLRenderer();
 			document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
 			
 			var perspCamera_XYZ = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
-			perspCamera_XYZ.position.z = 5;
+			perspCamera_XYZ.position.z = 3;
 			
 			// Image Scene
 			var ImageRenderer = new THREE.WebGLRenderer();
 			document.getElementById("imageView").appendChild( ImageRenderer.domElement );
 
 			var ImageScene = new THREE.Scene();
-			ImageScene.background = new THREE.Color( "rgb(0,127,0)" );			
+			ImageScene.background = new THREE.Color( "rgb(127,127,127)" );			
 
 			var perspCamera_Image = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
-			perspCamera_Image.position.z = 5;
+			perspCamera_Image.position.z = 1;
 
 			// ----
 
-			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
-
-			var material709_xyY = new THREE.ShaderMaterial( {
-			uniforms: {
-				convMatXYZ: { value: Utils.sRGB_to_XYZ },
-				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-				opacity: {value: 0.1}
-			},
-			depthTest: false,
-			vertexShader: document.getElementById( 'vertexShader' ).textContent,
-			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
-			} );
-
-			material709_xyY.transparent = true;
-			material709_xyY.opacity = 0.1;
-
-			var cube709_xyY = new THREE.Mesh( boxGeo, material709_xyY );
-			cube709_xyY.renderOrder = 0;
-			xyYscene.add(cube709_xyY);
-
-			var axesHelper = new THREE.AxesHelper( 1 );
-			xyYscene.add( axesHelper );
-
+			// IMAGE SCENE
 			var quad_mat = new THREE.ShaderMaterial( {
 			uniforms: {
 				tex: {value: lightsaber_loader, type:"t"},
@@ -307,23 +291,86 @@
 
 			const quad = new THREE.PlaneGeometry( 1, 1 );
 			const mesh = new THREE.Mesh( quad, quad_mat );
-			mesh.position.x = -1.5;
-			xyYscene.add( mesh );
+			ImageScene.add( mesh );
+
+			// xyY scene
+			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
+
+			var material709_xyY = new THREE.ShaderMaterial( {
+			uniforms: {
+				convMatXYZ: { value: Utils.sRGB_to_XYZ },
+				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
+				opacity: {value: 0.5},
+				to_xyY: {value: true}
+			},
+			depthTest: false,
+			vertexShader: document.getElementById( 'vertexShader' ).textContent,
+			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+			} );
+
+			material709_xyY.transparent = true;
+			material709_xyY.opacity = 0.1;
+
+			var cube709_xyY = new THREE.Mesh( boxGeo, material709_xyY );
+			cube709_xyY.renderOrder = 0;
+			xyYscene.add(cube709_xyY);
+
+			var axesHelper = new THREE.AxesHelper( 1 );
+			xyYscene.add( axesHelper );
+
+			//XYZ Scene
+			{
+				var boxGeo_XYZ = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
+
+				var material709_XYZ = new THREE.ShaderMaterial( {
+				uniforms: {
+					convMatXYZ: { value: Utils.sRGB_to_XYZ },
+					whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
+					opacity: {value: 0.5},
+					to_xyY: {value: false}
+				},
+				depthTest: false,
+				vertexShader: document.getElementById( 'vertexShader' ).textContent,
+				fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+				} );
+
+				material709_XYZ.transparent = true;
+				material709_XYZ.opacity = 0.1;
+				const group = new THREE.Group();
+				var cube709_XYZ = new THREE.Mesh( boxGeo_XYZ, material709_XYZ );
+				cube709_XYZ.renderOrder = 0;
+				group.add(cube709_XYZ);
+
+				var axesHelper = new THREE.AxesHelper( 1 );
+				group.add(axesHelper);
+				XYZscene.add(group);
+
+				var controls_XYZ = new OrbitControls( perspCamera_XYZ, XYZrenderer.domElement );
+				controls_XYZ.target.y = 0.5;
+				controls_XYZ.target.x = 0.5;
+				controls_XYZ.target.z = 0.5;
+				controls_XYZ.damping = 0.2;
+			}
+
+
 
 			var size = 10;
 			var divisions = 10;
 
 			var controls_xyY = new OrbitControls( perspCamera_xyY, xyYrenderer.domElement );
+			controls_xyY.target.y = 0.5;
+			controls_xyY.target.x = 0.5;
+			controls_xyY.target.z = 0.5;
 			controls_xyY.damping = 0.2;
 			
 			var pointCloudGeo = new THREE.BufferGeometry();
-
+		
 			const positions = [];
 			const colors = [];
 			pointCloudGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
 			pointCloudGeo.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 			pointCloudGeo.computeBoundingSphere();
-
+			
 			// uniforms
 			var uniforms = {
 				convMatXYZ: { value: Utils.sRGB_to_XYZ },
@@ -347,11 +394,11 @@
 				transparent:  true,
 				vertexColors: true
 			});
-
+			/*
 			var point_xyY = new THREE.Points(pointCloudGeo, pointShaderMaterial);
 			point_xyY.renderOrder = 1;
 			xyYscene.add( point_xyY );
-			
+			*/
 
 			// UI
 
