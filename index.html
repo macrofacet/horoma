@@ -5,19 +5,22 @@
 		<title>Horoma - Color Explorer</title>
 		<style>
 			html, body { margin: 0; height:100% }
-			canvas { /*width: 100%; height: 100%;*/ }
+			canvas { width: 100%; height: 100%; }
 
 			#container {
 				display:flex;
 				flex-direction: column;
 				height: 100%;
-				min-height: 100%;
+				min-width: 0;
+				min-height: 0;
 			}
 
 			.row {
 				flex:1;
 				display:flex;
 				flex-direction:row;
+				min-width: 0;
+				min-height: 0;
 			}
 
 			#top {
@@ -26,6 +29,8 @@
 
 			#bottom {
 				flex: 1;
+				height: 450px;
+				min-height: 450px;
 			}
 
 			.row > div {
@@ -51,9 +56,7 @@
 		<div id="container">
 			<div id="top" class="row">
 				<div id="imageView" style="background-color:blue">
-					<canvas id="imageCanvas" style="background-color:aqua"></canvas>
 				</div>
-				<!--<div id="controls" style="border:1px solid black"></div>-->
 			</div>
 			<div id="bottom" class="row">
 				<div id="xyYView" style="background-color:red"></div>
@@ -235,7 +238,7 @@
 			xyYscene.background = new THREE.Color( "rgb(127,0,0)" );
 			
 			var xyYrenderer = new THREE.WebGLRenderer();
-			//document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
+			document.getElementById("xyYView").appendChild( xyYrenderer.domElement );
 			
 			var perspCamera_xyY = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
 			perspCamera_xyY.position.z = 5;
@@ -245,14 +248,14 @@
 			XYZscene.background = new THREE.Color( "rgb(0,0,127)" );
 
 			var XYZrenderer = new THREE.WebGLRenderer();
-			//document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
+			document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
 			
 			var perspCamera_XYZ = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
 			perspCamera_XYZ.position.z = 5;
 			
 			// Image Scene
 			var ImageRenderer = new THREE.WebGLRenderer();
-			//document.getElementById("imageView").appendChild( ImageRenderer.domElement );
+			document.getElementById("imageView").appendChild( ImageRenderer.domElement );
 
 			var ImageScene = new THREE.Scene();
 			ImageScene.background = new THREE.Color( "rgb(0,127,0)" );			
@@ -280,7 +283,7 @@
 
 			var cube709_xyY = new THREE.Mesh( boxGeo, material709_xyY );
 			cube709_xyY.renderOrder = 0;
-			//xyYscene.add(cube709_xyY);
+			xyYscene.add(cube709_xyY);
 
 			var axesHelper = new THREE.AxesHelper( 1 );
 			xyYscene.add( axesHelper );
@@ -547,14 +550,13 @@
 			function render() {
 				
 				requestAnimationFrame( render );
-				//resizeRendererToDisplaySize(ImageRenderer, perspCamera_Image, document.getElementById("imageView"));
-				//resizeRendererToDisplaySize(xyYrenderer, perspCamera_xyY, document.getElementById("xyYView"));
-				//resizeRendererToDisplaySize(XYZrenderer, perspCamera_XYZ, document.getElementById("XYZView"));
+				resizeRendererToDisplaySize(ImageRenderer, perspCamera_Image, document.getElementById("imageView"));
+				resizeRendererToDisplaySize(xyYrenderer, perspCamera_xyY, document.getElementById("xyYView"));
+				resizeRendererToDisplaySize(XYZrenderer, perspCamera_XYZ, document.getElementById("XYZView"));
 				
 				ImageRenderer.render( ImageScene, perspCamera_Image );
 				xyYrenderer.render( xyYscene, perspCamera_xyY );
 				XYZrenderer.render( XYZscene, perspCamera_XYZ );
-
 			}
 
 			render();
