@@ -25,7 +25,7 @@ float3x3 inv_f33(float3x3 m) {
 }
 
 
-float3 XYZ_to_xyY(float3 xyz, float3 whitepoint)
+float3 XYZ_to_xyY(float3 xyz, float2 whitepoint)
 {
     float sum = xyz.x + xyz.y + xyz.z;
     vec3 xyY = vec3(0, 0, 0);

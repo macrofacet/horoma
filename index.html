@@ -64,13 +64,18 @@
 			</div>
 		</div>
 		<script type='x-shader/x-vertex' id='point_vs'>
-			
+
+			uniform mat3 convMatXYZ;
+			uniform vec2 whitePoint;
+			uniform bool to_xyY;
+
 			uniform float exposure;			
 			uniform float saturation;
 			uniform float compression;
 			uniform float rawlerp;
 
 			varying vec3 vColorRGB;	
+
 
 
 			void main() {
@@ -85,7 +90,11 @@
 				// Lerp between raw and image
 				vColor = mix(color, vColor, rawlerp);
 
-				vec4 mvPosition = modelViewMatrix * vec4( vColor, 1.0 );
+				vec3 localPos = convMatXYZ * vColor;
+				if(to_xyY) {
+					localPos = XYZ_to_xyY(localPos, whitePoint).xzy;
+				}
+				vec4 mvPosition = modelViewMatrix * vec4( localPos, 1.0 );
 				gl_PointSize = 5.0;
 				gl_Position = projectionMatrix * mvPosition;
 
@@ -293,7 +302,16 @@
 			const mesh = new THREE.Mesh( quad, quad_mat );
 			ImageScene.add( mesh );
 
-			// xyY scene
+
+			// COMMON SCENE 
+			var pointCloudGeo = new THREE.BufferGeometry();		
+			const positions = [];
+			const colors = [];
+			pointCloudGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
+			pointCloudGeo.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
+			pointCloudGeo.computeBoundingSphere();
+
+			// xyY SCENE
 			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
 
 			var material709_xyY = new THREE.ShaderMaterial( {
@@ -318,87 +336,97 @@
 			var axesHelper = new THREE.AxesHelper( 1 );
 			xyYscene.add( axesHelper );
 
-			//XYZ Scene
-			{
-				var boxGeo_XYZ = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
-
-				var material709_XYZ = new THREE.ShaderMaterial( {
+			// point cloud material
+			var pointShaderMaterial_xyY = new THREE.ShaderMaterial( {
 				uniforms: {
 					convMatXYZ: { value: Utils.sRGB_to_XYZ },
 					whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-					opacity: {value: 0.5},
-					to_xyY: {value: false}
+					to_xyY:{ value: true},
+					saturation: {value: 1.0},
+					rawlerp:{value:1.0},
+					exposure:{value:1.0},
+					compression:{value:0.20},
+					min_ev:{value:-10.0},
+					max_ev:{value:6.5},
+					slope:{value:2.5},
+					toe_power:{value:3},
+					shoulder_power:{value:3.25}
 				},
-				depthTest: false,
-				vertexShader: document.getElementById( 'vertexShader' ).textContent,
-				fragmentShader: document.getElementById( 'fragmentShader' ).textContent
-				} );
-
-				material709_XYZ.transparent = true;
-				material709_XYZ.opacity = 0.1;
-				const group = new THREE.Group();
-				var cube709_XYZ = new THREE.Mesh( boxGeo_XYZ, material709_XYZ );
-				cube709_XYZ.renderOrder = 0;
-				group.add(cube709_XYZ);
-
-				var axesHelper = new THREE.AxesHelper( 1 );
-				group.add(axesHelper);
-				XYZscene.add(group);
-
-				var controls_XYZ = new OrbitControls( perspCamera_XYZ, XYZrenderer.domElement );
-				controls_XYZ.target.y = 0.5;
-				controls_XYZ.target.x = 0.5;
-				controls_XYZ.target.z = 0.5;
-				controls_XYZ.damping = 0.2;
-			}
-
-
-
-			var size = 10;
-			var divisions = 10;
+				vertexShader:  agx_common + "\n" +  document.getElementById( 'point_vs' ).textContent,
+				fragmentShader: document.getElementById( 'point_fs' ).textContent,
+				transparent:  true,
+				vertexColors: true
+			});
+			var point_xyY = new THREE.Points(pointCloudGeo, pointShaderMaterial_xyY);
+			point_xyY.renderOrder = 1;
+			xyYscene.add( point_xyY );
 
 			var controls_xyY = new OrbitControls( perspCamera_xyY, xyYrenderer.domElement );
 			controls_xyY.target.y = 0.5;
 			controls_xyY.target.x = 0.5;
 			controls_xyY.target.z = 0.5;
 			controls_xyY.damping = 0.2;
+			controls_xyY.update();
+
+			//XYZ SCENE		
 			
-			var pointCloudGeo = new THREE.BufferGeometry();
-		
-			const positions = [];
-			const colors = [];
-			pointCloudGeo.setAttribute( 'position', new THREE.Float32BufferAttribute( positions, 3 ) );
-			pointCloudGeo.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
-			pointCloudGeo.computeBoundingSphere();
-			
-			// uniforms
-			var uniforms = {
+			var boxGeo_XYZ = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
+
+			var material709_XYZ = new THREE.ShaderMaterial( {
+			uniforms: {
 				convMatXYZ: { value: Utils.sRGB_to_XYZ },
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-				saturation: {value: 1.0},
-				rawlerp:{value:1.0},
-				exposure:{value:1.0},
-				compression:{value:0.20},
-				min_ev:{value:-10.0},
-				max_ev:{value:6.5},
-				slope:{value:2.5},
-				toe_power:{value:3},
-				shoulder_power:{value:3.25}
-			};
+				opacity: {value: 0.5},
+				to_xyY: {value: false}
+			},
+			depthTest: false,
+			vertexShader: document.getElementById( 'vertexShader' ).textContent,
+			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
+			} );
+
+			material709_XYZ.transparent = true;
+			material709_XYZ.opacity = 0.1;
+			const group = new THREE.Group();
+			var cube709_XYZ = new THREE.Mesh( boxGeo_XYZ, material709_XYZ );
+			cube709_XYZ.renderOrder = 0;
+			group.add(cube709_XYZ);
+
+			var axesHelper = new THREE.AxesHelper( 1 );
+			group.add(axesHelper);
+			XYZscene.add(group);
 
 			// point cloud material
-			var pointShaderMaterial = new THREE.ShaderMaterial( {
-				uniforms:     uniforms,
+			var pointShaderMaterial_XYZ = new THREE.ShaderMaterial( {
+				uniforms: {
+					convMatXYZ: { value: Utils.sRGB_to_XYZ },
+					whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
+					to_xyY:{ value: false},
+					saturation: {value: 1.0},
+					rawlerp:{value:1.0},
+					exposure:{value:1.0},
+					compression:{value:0.20},
+					min_ev:{value:-10.0},
+					max_ev:{value:6.5},
+					slope:{value:2.5},
+					toe_power:{value:3},
+					shoulder_power:{value:3.25}
+				},
 				vertexShader:  agx_common + "\n" +  document.getElementById( 'point_vs' ).textContent,
 				fragmentShader: document.getElementById( 'point_fs' ).textContent,
 				transparent:  true,
 				vertexColors: true
 			});
-			/*
-			var point_xyY = new THREE.Points(pointCloudGeo, pointShaderMaterial);
-			point_xyY.renderOrder = 1;
-			xyYscene.add( point_xyY );
-			*/
+
+			var point_XYZ = new THREE.Points(pointCloudGeo, pointShaderMaterial_XYZ);
+			point_XYZ.renderOrder = 1;
+			XYZscene.add( point_XYZ );
+
+			var controls_XYZ = new OrbitControls( perspCamera_XYZ, XYZrenderer.domElement );
+			controls_XYZ.target.y = 0.5;
+			controls_XYZ.target.x = 0.5;
+			controls_XYZ.target.z = 0.5;
+			controls_XYZ.damping = 0.2;
+			controls_XYZ.update();
 
 			// UI
 
@@ -477,16 +505,27 @@
 
 			function updateUniforms()
 			{
-				pointShaderMaterial.uniforms.exposure.value = params.exposure;
-				pointShaderMaterial.uniforms.rawlerp.value = params.lerp;
-				pointShaderMaterial.uniforms.saturation.value = params.saturation;
+				pointShaderMaterial_xyY.uniforms.exposure.value = params.exposure;
+				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
+				pointShaderMaterial_xyY.uniforms.saturation.value = params.saturation;
 				
-				pointShaderMaterial.uniforms.compression.value = params.compression;
-				pointShaderMaterial.uniforms.min_ev.value = params.min_ev;
-				pointShaderMaterial.uniforms.max_ev.value = params.max_ev;
-				pointShaderMaterial.uniforms.slope.value = params.slope;
-				pointShaderMaterial.uniforms.toe_power.value = params.toe_power;
-				pointShaderMaterial.uniforms.shoulder_power.value = params.shoulder_power;
+				pointShaderMaterial_xyY.uniforms.compression.value = params.compression;
+				pointShaderMaterial_xyY.uniforms.min_ev.value = params.min_ev;
+				pointShaderMaterial_xyY.uniforms.max_ev.value = params.max_ev;
+				pointShaderMaterial_xyY.uniforms.slope.value = params.slope;
+				pointShaderMaterial_xyY.uniforms.toe_power.value = params.toe_power;
+				pointShaderMaterial_xyY.uniforms.shoulder_power.value = params.shoulder_power;
+
+				pointShaderMaterial_XYZ.uniforms.exposure.value = params.exposure;
+				pointShaderMaterial_XYZ.uniforms.rawlerp.value = params.lerp;
+				pointShaderMaterial_XYZ.uniforms.saturation.value = params.saturation;
+				
+				pointShaderMaterial_XYZ.uniforms.compression.value = params.compression;
+				pointShaderMaterial_XYZ.uniforms.min_ev.value = params.min_ev;
+				pointShaderMaterial_XYZ.uniforms.max_ev.value = params.max_ev;
+				pointShaderMaterial_XYZ.uniforms.slope.value = params.slope;
+				pointShaderMaterial_XYZ.uniforms.toe_power.value = params.toe_power;
+				pointShaderMaterial_XYZ.uniforms.shoulder_power.value = params.shoulder_power;
 
 
 				quad_mat.uniforms.exposure.value = params.exposure;
@@ -517,24 +556,6 @@
 					colors.push(p.x, p.y, p.z);
 
 					p.max(new THREE.Vector3(0, 0, 0));
-					
-					/*
-					var tp = new THREE.Vector3();
-					if(params.useLut)
-					{
-						var lut = lutMap[params.lut];
-						var lx = Utils.open_domain_to_normalized_log2(p.x, -10, 6.5);
-						var ly = Utils.open_domain_to_normalized_log2(p.y, -10, 6.5);
-						var lz = Utils.open_domain_to_normalized_log2(p.z, -10, 6.5);
-						var lp = new THREE.Vector3(lx, ly, lz);
-						lp.clampScalar(0, 1);
-						tp = lut.trilinear_lookup(lp);
-					}
-					else
-					{
-						tp = Inset.applyTransform(p.clone(), params.slope, params.toe_power, params.shoulder_power, params.min_ev, params.max_ev);
-					}
-					*/
 
 					positions.push(p.x, p.y, p.z);
 				}
