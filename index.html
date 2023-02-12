@@ -18,10 +18,18 @@
 			.row {
 				flex:1;
 				display:flex;
-				flex-direction:row;
+				flex-direction: row;
 				min-width: 0;
 				min-height: 0;
 			}
+
+			.column {
+				flex : 1;
+				display:flex;
+				flex-direction:column;
+				min-width: 0;
+				min-height: 0;
+			}	
 
 			#top {
 				flex: 2;
@@ -33,11 +41,22 @@
 				min-height: 450px;
 			}
 
-			.row > div {
+			.view {
 				flex : 1;
-				display:flex;
-				flex-direction:column;
-			}	
+				min-width: 0;
+				min-height: 0;
+			}
+
+			.divider {
+				background-color: gray; 
+			}
+
+			.header {
+				background-color: rgb(70, 70, 70);
+				padding: 5px;
+				color: white;
+				font-family: 'Courier New', Courier, monospace;
+			}
 			
 		</style>
 		
@@ -55,19 +74,27 @@
 	<body>
 		<div id="container">
 			<div id="top" class="row">
-				<div id="imageView" style="background-color:blue">
-				</div>
+				<div id="imageView" class="view"></div>
 			</div>
+			<div class="divider" style="min-height:2px"></div>
 			<div id="bottom" class="row">
-				<div id="xyYView" style="background-color:red"></div>
-				<div id="XYZView" style="background-color:yellow"></div>
+				<div class="column">
+					<div class="header">xyY/XYZ View<input type="checkbox" id="viewswitch"></div>
+					<div id="xyYView" class="view"></div>
+				</div>
+				<div class="divider" style="min-width:2px"></div>
+				<div class="column">
+					<div class="header">RGB View</div>
+					<div id="RGBView" class="view"></div>
+				</div>
 			</div>
 		</div>
 		<script type='x-shader/x-vertex' id='point_vs'>
 
 			uniform mat3 convMatXYZ;
 			uniform vec2 whitePoint;
-			uniform bool to_xyY;
+
+			uniform int renderOption;
 
 			uniform float exposure;			
 			uniform float saturation;
@@ -90,10 +117,17 @@
 				// Lerp between raw and image
 				vColor = mix(color, vColor, rawlerp);
 
-				vec3 localPos = convMatXYZ * vColor;
-				if(to_xyY) {
-					localPos = XYZ_to_xyY(localPos, whitePoint).xzy;
+				vec3 localPos;
+
+				if(renderOption == 0) {
+					localPos = vColor;
+				} else if(renderOption == 1) {
+					localPos = convMatXYZ * vColor;
+				} else if (renderOption == 2) {
+					vec3 XYZPos = convMatXYZ * vColor;
+					localPos = XYZ_to_xyY(XYZPos, whitePoint).xzy;
 				}
+
 				vec4 mvPosition = modelViewMatrix * vec4( localPos, 1.0 );
 				gl_PointSize = 5.0;
 				gl_Position = projectionMatrix * mvPosition;
@@ -147,39 +181,26 @@
 			uniform mat3 convMatXYZ;
 			uniform vec2 whitePoint;
 			varying vec3 vColorRGB;
-			uniform bool to_xyY;
+			uniform int renderOption;
 			void main() {
 
 				vec3 pos = position;
-				vec3 rgb = (pos + 0.5); // box is centered at 0,0,0
- 
-				vec3 xyz = convMatXYZ * rgb;
-				vec3 position;
-				if(to_xyY)
-				{
-					float sum = xyz.x + xyz.y + xyz.z;
-					vec3 xyY = vec3(0, 0, 0);
-					if(sum != 0.0)
-					{
-						xyY.x = xyz.x / sum;
-						xyY.y = xyz.y / sum;
-						xyY.z = xyz.y;
-					}
-					else
-					{
-						xyY.x = whitePoint.x;
-						xyY.y = whitePoint.y;
-						xyY.z = xyz.y;
-					}
-					position = xyY.xzy;
-				} else {
-					position = xyz;
+				vec3 vColor = (pos + 0.5); // box is centered at 0,0,0
+
+				vec3 localPos;
+				if(renderOption == 0) {
+					localPos = vColor;
+				} else if(renderOption == 1) {
+					localPos = convMatXYZ * vColor;
+				} else if (renderOption == 2) {
+					vec3 XYZPos = convMatXYZ * vColor;
+					localPos = XYZ_to_xyY(XYZPos, whitePoint).xzy;
 				}
 
-				vec4 mvPosition = modelViewMatrix * vec4( position, 1.0 );
+				vec4 mvPosition = modelViewMatrix * vec4( localPos, 1.0 );
 				gl_Position = projectionMatrix * mvPosition;
 
-				vColorRGB = rgb;
+				vColorRGB = vColor;
 			}
 
 		</script>
@@ -259,14 +280,14 @@
 			perspCamera_xyY.position.z = 3;
 
 			// XYZ Scene
-			var XYZscene = new THREE.Scene();
-			XYZscene.background = new THREE.Color( "rgb(0,0,0)" );
+			var RGBscene = new THREE.Scene();
+			RGBscene.background = new THREE.Color( "rgb(0,0,0)" );
 
-			var XYZrenderer = new THREE.WebGLRenderer();
-			document.getElementById("XYZView").appendChild( XYZrenderer.domElement );
+			var RGBrenderer = new THREE.WebGLRenderer();
+			document.getElementById("RGBView").appendChild( RGBrenderer.domElement );
 			
-			var perspCamera_XYZ = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
-			perspCamera_XYZ.position.z = 3;
+			var perspCamera_RGB = new THREE.PerspectiveCamera( 45, aspect, 0.1, 1000 );
+			perspCamera_RGB.position.z = 3;
 			
 			// Image Scene
 			var ImageRenderer = new THREE.WebGLRenderer();
@@ -311,18 +332,19 @@
 			pointCloudGeo.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 			pointCloudGeo.computeBoundingSphere();
 
-			// xyY SCENE
 			var boxGeo = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
+
+			// xyY/XYZ SCENE
 
 			var material709_xyY = new THREE.ShaderMaterial( {
 			uniforms: {
 				convMatXYZ: { value: Utils.sRGB_to_XYZ },
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
 				opacity: {value: 0.5},
-				to_xyY: {value: true}
+				renderOption:{value: 2},
 			},
 			depthTest: false,
-			vertexShader: document.getElementById( 'vertexShader' ).textContent,
+			vertexShader:  agx_common + "\n" + document.getElementById( 'vertexShader' ).textContent,
 			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
 			} );
 
@@ -341,7 +363,7 @@
 				uniforms: {
 					convMatXYZ: { value: Utils.sRGB_to_XYZ },
 					whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-					to_xyY:{ value: true},
+					renderOption:{ value: 2},
 					saturation: {value: 1.0},
 					rawlerp:{value:1.0},
 					exposure:{value:1.0},
@@ -368,11 +390,9 @@
 			controls_xyY.damping = 0.2;
 			controls_xyY.update();
 
-			//XYZ SCENE		
-			
-			var boxGeo_XYZ = new THREE.BoxGeometry(1, 1, 1, 20, 20, 20);
-
-			var material709_XYZ = new THREE.ShaderMaterial( {
+			//RGB SCENE
+			/*
+			var material709_RGB = new THREE.ShaderMaterial( {
 			uniforms: {
 				convMatXYZ: { value: Utils.sRGB_to_XYZ },
 				whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
@@ -384,23 +404,17 @@
 			fragmentShader: document.getElementById( 'fragmentShader' ).textContent
 			} );
 
-			material709_XYZ.transparent = true;
-			material709_XYZ.opacity = 0.1;
-			const group = new THREE.Group();
-			var cube709_XYZ = new THREE.Mesh( boxGeo_XYZ, material709_XYZ );
-			cube709_XYZ.renderOrder = 0;
-			group.add(cube709_XYZ);
-
-			var axesHelper = new THREE.AxesHelper( 1 );
-			group.add(axesHelper);
-			XYZscene.add(group);
+			material709_RGB.transparent = true;
+			material709_RGB.opacity = 0.1;
+			*/
+			RGBscene.add(axesHelper);
 
 			// point cloud material
-			var pointShaderMaterial_XYZ = new THREE.ShaderMaterial( {
+			var pointShaderMaterial_RGB = new THREE.ShaderMaterial( {
 				uniforms: {
 					convMatXYZ: { value: Utils.sRGB_to_XYZ },
 					whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
-					to_xyY:{ value: false},
+					renderOption:{ value: 0},
 					saturation: {value: 1.0},
 					rawlerp:{value:1.0},
 					exposure:{value:1.0},
@@ -417,18 +431,20 @@
 				vertexColors: true
 			});
 
-			var point_XYZ = new THREE.Points(pointCloudGeo, pointShaderMaterial_XYZ);
-			point_XYZ.renderOrder = 1;
-			XYZscene.add( point_XYZ );
+			var point_RGB = new THREE.Points(pointCloudGeo, pointShaderMaterial_RGB);
+			point_RGB.renderOrder = 1;
+			RGBscene.add( point_RGB );
 
-			var controls_XYZ = new OrbitControls( perspCamera_XYZ, XYZrenderer.domElement );
-			controls_XYZ.target.y = 0.5;
-			controls_XYZ.target.x = 0.5;
-			controls_XYZ.target.z = 0.5;
-			controls_XYZ.damping = 0.2;
-			controls_XYZ.update();
+			var controls_RGB = new OrbitControls( perspCamera_RGB, RGBrenderer.domElement );
+			controls_RGB.target.y = 0.5;
+			controls_RGB.target.x = 0.5;
+			controls_RGB.target.z = 0.5;
+			controls_RGB.damping = 0.2;
+			controls_RGB.update();
 
 			// UI
+
+			var xySwitch = false;
 
 			var params = { 
 						generator:"generic",
@@ -516,16 +532,19 @@
 				pointShaderMaterial_xyY.uniforms.toe_power.value = params.toe_power;
 				pointShaderMaterial_xyY.uniforms.shoulder_power.value = params.shoulder_power;
 
-				pointShaderMaterial_XYZ.uniforms.exposure.value = params.exposure;
-				pointShaderMaterial_XYZ.uniforms.rawlerp.value = params.lerp;
-				pointShaderMaterial_XYZ.uniforms.saturation.value = params.saturation;
+				pointShaderMaterial_RGB.uniforms.exposure.value = params.exposure;
+				pointShaderMaterial_RGB.uniforms.rawlerp.value = params.lerp;
+				pointShaderMaterial_RGB.uniforms.saturation.value = params.saturation;
 				
-				pointShaderMaterial_XYZ.uniforms.compression.value = params.compression;
-				pointShaderMaterial_XYZ.uniforms.min_ev.value = params.min_ev;
-				pointShaderMaterial_XYZ.uniforms.max_ev.value = params.max_ev;
-				pointShaderMaterial_XYZ.uniforms.slope.value = params.slope;
-				pointShaderMaterial_XYZ.uniforms.toe_power.value = params.toe_power;
-				pointShaderMaterial_XYZ.uniforms.shoulder_power.value = params.shoulder_power;
+				pointShaderMaterial_RGB.uniforms.compression.value = params.compression;
+				pointShaderMaterial_RGB.uniforms.min_ev.value = params.min_ev;
+				pointShaderMaterial_RGB.uniforms.max_ev.value = params.max_ev;
+				pointShaderMaterial_RGB.uniforms.slope.value = params.slope;
+				pointShaderMaterial_RGB.uniforms.toe_power.value = params.toe_power;
+				pointShaderMaterial_RGB.uniforms.shoulder_power.value = params.shoulder_power;
+
+				pointShaderMaterial_xyY.uniforms.renderOption.value = xySwitch ? 1 : 2;
+				material709_xyY.uniforms.renderOption.value = pointShaderMaterial_xyY.uniforms.renderOption.value;
 
 
 				quad_mat.uniforms.exposure.value = params.exposure;
@@ -620,15 +639,22 @@
 				requestAnimationFrame( render );
 				resizeRendererToDisplaySize(ImageRenderer, perspCamera_Image, document.getElementById("imageView"));
 				resizeRendererToDisplaySize(xyYrenderer, perspCamera_xyY, document.getElementById("xyYView"));
-				resizeRendererToDisplaySize(XYZrenderer, perspCamera_XYZ, document.getElementById("XYZView"));
+				resizeRendererToDisplaySize(RGBrenderer, perspCamera_RGB, document.getElementById("RGBView"));
 				
 				ImageRenderer.render( ImageScene, perspCamera_Image );
 				xyYrenderer.render( xyYscene, perspCamera_xyY );
-				XYZrenderer.render( XYZscene, perspCamera_XYZ );
+				RGBrenderer.render( RGBscene, perspCamera_RGB );
 			}
 
 			render();
 
+			document.getElementById("viewswitch").addEventListener("click", OnViewSwitchClicked);
+			function OnViewSwitchClicked()
+			{
+				xySwitch = document.getElementById("viewswitch").checked;
+				updateUniforms();
+			}
+			/*
 			window.addEventListener( 'resize', onWindowResize, false );
 
 			function onWindowResize(){
@@ -639,6 +665,7 @@
 			    //perspCamera_xyY.updateProjectionMatrix();
 			    //xyYrenderer.setSize( window.innerWidth, window.innerHeight );
 			}
+			*/
 		</script>
 	</body>
 </html>
