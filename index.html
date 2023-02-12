@@ -79,7 +79,7 @@
 			<div class="divider" style="min-height:2px"></div>
 			<div id="bottom" class="row">
 				<div class="column">
-					<div class="header">xyY/XYZ View<input type="checkbox" id="viewswitch"></div>
+					<div class="header">xyY/XYZ View<input type="checkbox" id="viewswitch" autocomplete="off"></div>
 					<div id="xyYView" class="view"></div>
 				</div>
 				<div class="divider" style="min-width:2px"></div>
@@ -407,6 +407,7 @@
 			material709_RGB.transparent = true;
 			material709_RGB.opacity = 0.1;
 			*/
+			var axesHelper = new THREE.AxesHelper( 1 );
 			RGBscene.add(axesHelper);
 
 			// point cloud material
