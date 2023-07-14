@@ -98,7 +98,8 @@
 
 			uniform float exposure;			
 			uniform float saturation;
-			uniform float compression;
+			uniform float3 compression;
+			uniform float3 rotation;
 			uniform float rawlerp;
 
 			varying vec3 vColorRGB;	
@@ -110,7 +111,7 @@
 
 				vColor *= pow(2.0f, exposure);
 				
-				vColor = apply_agx(vColor, compression);
+				vColor = apply_agx(vColor, compression, rotation);
 				vColor = apply_saturation(vColor, saturation);
 				vColor = clamp(vColor, 0.0, 1.0);
 
@@ -161,7 +162,8 @@
 			uniform sampler2D tex;
 			uniform float exposure;
 			uniform float saturation;
-			uniform float compression;
+			uniform float3 compression;
+			uniform float3 rotation;
 			varying vec2 vUv;
 
 			void main() {
@@ -169,7 +171,7 @@
 
 				vColor = max(vColor, 0.0f);
 				vColor *= pow(2.0f, exposure);				
-				vColor = apply_agx(vColor, compression);
+				vColor = apply_agx(vColor, compression, rotation);
 				vColor = apply_saturation(vColor, saturation);
 				vColor = clamp(vColor, 0.0, 1.0);
 
@@ -307,7 +309,8 @@
 				tex: {value: lightsaber_loader, type:"t"},
 				exposure: {value:0},
 				saturation:{value:1},
-				compression:{value:0.17},
+				compression:{value:new THREE.Vector3(0, 0, 0)},
+				rotation:{value:new THREE.Vector3(0,0,0)},
 				min_ev:{value:-10.0},
 				max_ev:{value:6.5},
 				slope:{value:2.3},
@@ -367,7 +370,8 @@
 					saturation: {value: 1.0},
 					rawlerp:{value:1.0},
 					exposure:{value:1.0},
-					compression:{value:0.20},
+					compression:{value:new THREE.Vector3(0, 0, 0)},
+					rotation:{value:new THREE.Vector3(0,0,0)},
 					min_ev:{value:-10.0},
 					max_ev:{value:6.5},
 					slope:{value:2.5},
@@ -418,7 +422,8 @@
 					saturation: {value: 1.0},
 					rawlerp:{value:1.0},
 					exposure:{value:1.0},
-					compression:{value:0.20},
+					compression:{value:new THREE.Vector3(0, 0, 0)},
+					rotation:{value:new THREE.Vector3(0,0,0)},
 					min_ev:{value:-10.0},
 					max_ev:{value:6.5},
 					slope:{value:2.5},
@@ -457,7 +462,12 @@
 						exposure:0,
 						useLut:false,
 						lut:"Bourbon 64.CUBE",
-						compression:0.20,
+						compressionR:0.10,
+						compressionG:0.10,
+						compressionB:0.10,
+						rotationR:0,
+						rotationG:0,
+						rotationB:0,
 						min_ev:-10,
 						max_ev:6.5,
 						slope:2,
@@ -525,7 +535,8 @@
 				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
 				pointShaderMaterial_xyY.uniforms.saturation.value = params.saturation;
 				
-				pointShaderMaterial_xyY.uniforms.compression.value = params.compression;
+				pointShaderMaterial_xyY.uniforms.compression.value = new THREE.Vector3(params.compressionR, params.compressionG, params.compressionB);
+				pointShaderMaterial_xyY.uniforms.rotation.value = new THREE.Vector3(params.rotationR, params.rotationG, params.rotationB);
 				pointShaderMaterial_xyY.uniforms.min_ev.value = params.min_ev;
 				pointShaderMaterial_xyY.uniforms.max_ev.value = params.max_ev;
 				pointShaderMaterial_xyY.uniforms.slope.value = params.slope;
@@ -536,7 +547,8 @@
 				pointShaderMaterial_RGB.uniforms.rawlerp.value = params.lerp;
 				pointShaderMaterial_RGB.uniforms.saturation.value = params.saturation;
 				
-				pointShaderMaterial_RGB.uniforms.compression.value = params.compression;
+				pointShaderMaterial_RGB.uniforms.compression.value = new THREE.Vector3(params.compressionR, params.compressionG, params.compressionB);
+				pointShaderMaterial_RGB.uniforms.rotation.value = new THREE.Vector3(params.rotationR, params.rotationG, params.rotationB);
 				pointShaderMaterial_RGB.uniforms.min_ev.value = params.min_ev;
 				pointShaderMaterial_RGB.uniforms.max_ev.value = params.max_ev;
 				pointShaderMaterial_RGB.uniforms.slope.value = params.slope;
@@ -550,7 +562,8 @@
 				quad_mat.uniforms.exposure.value = params.exposure;
 				quad_mat.uniforms.saturation.value = params.saturation;	
 
-				quad_mat.uniforms.compression.value = params.compression;
+				quad_mat.uniforms.compression.value = new THREE.Vector3(params.compressionR, params.compressionG, params.compressionB);
+				quad_mat.uniforms.rotation.value = new THREE.Vector3(params.rotationR, params.rotationG, params.rotationB);
 				quad_mat.uniforms.min_ev.value = params.min_ev;
 				quad_mat.uniforms.max_ev.value = params.max_ev;
 				quad_mat.uniforms.slope.value = params.slope;
@@ -607,7 +620,14 @@
 			var algorithmFolder = gui.addFolder("algorithm");
 			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updateUniforms);
 
-			algorithmFolder.add(params, 'compression', 0, 0.5, 0.0001).onChange(updateUniforms);
+			algorithmFolder.add(params, 'compressionR', 0, 0.5, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'compressionG', 0, 0.5, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'compressionB', 0, 0.5, 0.01).onChange(updateUniforms);
+
+			algorithmFolder.add(params, 'rotationR', -10, 10, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'rotationG', -10, 10, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'rotationB', -10, 10, 0.01).onChange(updateUniforms);
+			
 			algorithmFolder.add(params, 'min_ev', -20, 20, 0.1).onChange(updateUniforms);
 			algorithmFolder.add(params, 'max_ev', 0, 20, 0.1).onChange(updateUniforms);
 
