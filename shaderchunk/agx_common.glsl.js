@@ -3,6 +3,8 @@ export default /*glsl*/`
 #define float2 vec2
 #define float3x3 mat3
 #define mul(a, b) b * a
+#define PI 3.14159265359
+#define lerp mix
 
 #define saturate(a) clamp(a, 0.0f, 1.0f)
 
@@ -83,15 +85,43 @@ float3x3 primaries_to_matrix(float2 xy_red, float2 xy_green, float2 xy_blue, flo
         scale.x * XYZ_red.z, scale.y * XYZ_green.z,	scale.z * XYZ_blue.z);
 }
 
-float3x3 ComputeCompressionMatrix(float2 xyR, float2 xyG, float2 xyB, float2 xyW, float compression)
-{
-    float scale_factor = 1.0f / (1.0f - compression);
-    float2 R = ((xyR - xyW) * scale_factor) + xyW;
-    float2 G = ((xyG - xyW) * scale_factor) + xyW;
-    float2 B = ((xyB - xyW) * scale_factor) + xyW;
-    float2 W = xyW;
 
-    return primaries_to_matrix(R, G, B, W);
+float RotationToSlide(float2 primary, float2 neighborA, float2 neighborB, float angle)
+{
+	float2 neighbor = angle >= 0.0f ? neighborA : neighborB;
+
+	float distance_to_neighbor = distance(primary, neighbor);
+	float distance_to_center = length(primary);
+
+	float side = sin(angle / 180.0f * PI) * distance_to_center;
+
+	return side / distance_to_neighbor; 
+}
+
+float2 SlidePrimary(float2 primary, float2 neighborA, float2 neighborB, float amount)
+{
+	return lerp(primary, amount >= 0.0f ? neighborA : neighborB, saturate(abs(amount)));
+}
+
+float3x3 ComputeCompressionMatrix(float2 xyR, float2 xyG, float2 xyB, float2 xyW, float3 compression, float3 rotation)
+{
+	float2 offsetR = xyR - xyW;
+	float2 offsetG = xyG - xyW;
+	float2 offsetB = xyB - xyW;
+
+	float3 slide = float3(0, 0, 0);
+	slide.r = RotationToSlide(offsetR, offsetB, offsetG, rotation.r);
+	slide.g = RotationToSlide(offsetG, offsetR, offsetB, rotation.g);
+	slide.b = RotationToSlide(offsetB, offsetG, offsetR, rotation.b);
+
+	float3 scale_factor = 1.0f / (1.0f - compression);	
+
+	float2 R = (SlidePrimary(offsetR, offsetB, offsetG, slide.r) * scale_factor.r) + xyW;
+	float2 G = (SlidePrimary(offsetG, offsetR, offsetB, slide.g) * scale_factor.g) + xyW;
+	float2 B = (SlidePrimary(offsetB, offsetG, offsetR, slide.b) * scale_factor.b) + xyW;
+	float2 W = xyW;
+
+	return primaries_to_matrix(R, G, B, W);
 }
 
 
@@ -153,7 +183,7 @@ uniform float slope;
 uniform float toe_power;
 uniform float shoulder_power;
 
-float3 apply_agx(float3 rgb, float compression)
+float3 apply_agx(float3 rgb, float3 compression, float3 rotation)
 {
     float3x3 sRGB_to_XYZ = primaries_to_matrix(float2(0.64,0.33),
 													float2(0.3,0.6), 
@@ -163,7 +193,7 @@ float3 apply_agx(float3 rgb, float compression)
     float3x3 adjusted_to_XYZ = ComputeCompressionMatrix(float2(0.64,0.33),
                                                         float2(0.3,0.6), 
                                                         float2(0.15,0.06), 
-                                                        float2(0.3127, 0.3290), compression);							
+                                                        float2(0.3127, 0.3290), compression, rotation);							
 
     float3x3 XYZ_to_adjusted = inv_f33(adjusted_to_XYZ);
     float3x3 XYZ_to_sRGB = inv_f33(sRGB_to_XYZ);
