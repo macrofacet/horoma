@@ -235,8 +235,6 @@
 			import * as Generator from './js/generator.js'
 			import * as Inset from './js/inset.js'
 			
-			import * as Lut from './js/lut.js'
-
 			import agx_common from './shaderchunk/agx_common.glsl.js'
 
 			var images = {};
@@ -255,19 +253,6 @@
 							images.bar = textureData.data;
 						});
 						
-
-			const lutMap = {
-				'Bourbon 64.CUBE': null,
-				'Chemical 168.CUBE': null,
-			};
-
-			Object.keys( lutMap ).forEach( name => {
-				const loader = new THREE.FileLoader();
-				loader.setResponseType('text');
-				loader.load('luts/' + name, text => {
-					lutMap[ name ] =  new Lut.LUTCubeParser().parse(text);
-				});
-			});
 
 			var aspect = 1.0;
 
@@ -461,8 +446,6 @@
 						ratio:[0,0,0],
 						image:"xmas",
 						exposure:0,
-						useLut:false,
-						lut:"Bourbon 64.CUBE",
 						compressionR:0.10,
 						compressionG:0.10,
 						compressionB:0.10,
@@ -635,9 +618,6 @@
 			algorithmFolder.add(params, 'slope', 0, 10, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'toe_power', 0, 10, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updateUniforms);
-
-			algorithmFolder.add(params, 'useLut').onChange(updatePoint);
-			algorithmFolder.add(params, 'lut', Object.keys( lutMap )).onChange(updatePoint);
 
 			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updateUniforms);
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updateUniforms);
