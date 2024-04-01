@@ -456,13 +456,14 @@
 						ratio:[0,0,0],
 						image:"xmas",
 						exposure:0,
-						order:"TRS",
+						order:"SRT",
 						pre_translate_x:0,
 						pre_translate_y:0,
 						pre_translate_z:0,
-						pre_rotate_x:0,
-						pre_rotate_y:0,
-						pre_rotate_z:0,
+						pre_rotate_x:1,
+						pre_rotate_y:1,
+						pre_rotate_z:1,
+						pre_rotate_angle:0,
 						pre_scale_x:1,
 						pre_scale_y:1,
 						pre_scale_z:1,
@@ -537,7 +538,7 @@
 			{
 				var TranslationMatrix = new THREE.Matrix4().makeTranslation(params.pre_translate_x, params.pre_translate_y, params.pre_translate_z);
 				var RotationAngle = new THREE.Euler( params.pre_rotate_x, params.pre_rotate_y, params.pre_rotate_z, 'XYZ');
-				var RotationMatrix = new THREE.Matrix4().makeRotationFromEuler(RotationAngle);
+				var RotationMatrix = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(params.pre_rotate_x, params.pre_rotate_y, params.pre_rotate_z).normalize(), params.pre_rotate_angle * Math.PI / 180);
 				var ScaleMatrix = new THREE.Matrix4().makeScale(params.pre_scale_x, params.pre_scale_y, params.pre_scale_z);
 
 				var PreMatrix = new THREE.Matrix4();
@@ -656,9 +657,10 @@
 			algorithmFolder.add(params, 'pre_translate_y',-1, 1, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'pre_translate_z',-1, 1, 0.01).onChange(updateUniforms);
 			
-			algorithmFolder.add(params, 'pre_rotate_x',-1, 1, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_rotate_y',-1, 1, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_rotate_z',-1, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_rotate_x',0, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_rotate_y',0, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_rotate_z',0, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_rotate_angle',-360, 360, 1).onChange(updateUniforms);
 
 			algorithmFolder.add(params, 'pre_scale_x',-2, 2, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'pre_scale_y',-2, 2, 0.01).onChange(updateUniforms);
