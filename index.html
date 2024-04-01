@@ -94,6 +94,8 @@
 			uniform mat3 convMatXYZ;
 			uniform vec2 whitePoint;
 
+			uniform mat4 prematrix;
+
 			uniform int renderOption;
 
 			uniform float exposure;			
@@ -107,7 +109,10 @@
 
 
 			void main() {
-				vec3 vColor = max(color, 0.0f);
+				vec3 colorAtt = color;
+				vec3 preColor = (prematrix * vec4(colorAtt, 1.0)).rgb;
+
+				vec3 vColor = preColor;  //max(preColor, 0.0f);
 
 				vColor *= pow(2.0f, exposure);
 				
@@ -116,7 +121,7 @@
 				vColor = clamp(vColor, 0.0, 1.0);
 
 				// Lerp between raw and image
-				vColor = mix(color, vColor, rawlerp);
+				vColor = mix(preColor, vColor, rawlerp);
 
 				vec3 localPos;
 
@@ -160,6 +165,8 @@
 
 		<script  type="x-shader/x-fragment" id="image_ps">
 			uniform sampler2D tex;
+			uniform mat4 prematrix;
+
 			uniform float exposure;
 			uniform float saturation;
 			uniform float3 compression;
@@ -168,8 +175,9 @@
 
 			void main() {
 				vec3 vColor = texture2D(tex, vUv).rgb;
+				vColor = (prematrix * vec4(vColor, 1.0)).rgb;
 
-				vColor = max(vColor, 0.0f);
+				//vColor = max(vColor, 0.0f);
 				vColor *= pow(2.0f, exposure);				
 				vColor = apply_agx(vColor, compression, rotation);
 				vColor = apply_saturation(vColor, saturation);
@@ -292,6 +300,7 @@
 			var quad_mat = new THREE.ShaderMaterial( {
 			uniforms: {
 				tex: {value: lightsaber_loader, type:"t"},
+				prematrix:{value:new THREE.Matrix4()},
 				exposure: {value:0},
 				saturation:{value:1},
 				compression:{value:new THREE.Vector3(0, 0, 0)},
@@ -355,6 +364,7 @@
 					saturation: {value: 1.0},
 					rawlerp:{value:1.0},
 					exposure:{value:1.0},
+					prematrix:{value:new THREE.Matrix4()},
 					compression:{value:new THREE.Vector3(0, 0, 0)},
 					rotation:{value:new THREE.Vector3(0,0,0)},
 					min_ev:{value:-10.0},
@@ -408,6 +418,7 @@
 					saturation: {value: 1.0},
 					rawlerp:{value:1.0},
 					exposure:{value:1.0},
+					prematrix:{value:new THREE.Matrix4()},
 					compression:{value:new THREE.Vector3(0, 0, 0)},
 					rotation:{value:new THREE.Vector3(0,0,0)},
 					min_ev:{value:-10.0},
@@ -446,6 +457,15 @@
 						ratio:[0,0,0],
 						image:"xmas",
 						exposure:0,
+						pre_translate_x:0,
+						pre_translate_y:0,
+						pre_translate_z:0,
+						pre_rotate_x:0,
+						pre_rotate_y:0,
+						pre_rotate_z:0,
+						pre_scale_x:1,
+						pre_scale_y:1,
+						pre_scale_z:1,
 						compressionR:0.10,
 						compressionG:0.10,
 						compressionB:0.10,
@@ -515,6 +535,13 @@
 
 			function updateUniforms()
 			{
+				var TranslationMatrix = new THREE.Matrix4().makeTranslation(params.pre_translate_x, params.pre_translate_y, params.pre_translate_z);
+				var RotationAngle = new THREE.Euler( params.pre_rotate_x, params.pre_rotate_y, params.pre_rotate_z, 'XYZ');
+				var RotationMatrix = new THREE.Matrix4().makeRotationFromEuler(RotationAngle);
+				var ScaleMatrix = new THREE.Matrix4().makeScale(params.pre_scale_x, params.pre_scale_y, params.pre_scale_z);
+				var PreMatrix = ScaleMatrix.multiply(RotationMatrix).multiply(TranslationMatrix);
+
+
 				pointShaderMaterial_xyY.uniforms.exposure.value = params.exposure;
 				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
 				pointShaderMaterial_xyY.uniforms.saturation.value = params.saturation;
@@ -526,6 +553,7 @@
 				pointShaderMaterial_xyY.uniforms.slope.value = params.slope;
 				pointShaderMaterial_xyY.uniforms.toe_power.value = params.toe_power;
 				pointShaderMaterial_xyY.uniforms.shoulder_power.value = params.shoulder_power;
+				pointShaderMaterial_xyY.uniforms.prematrix.value = PreMatrix.clone();
 
 				pointShaderMaterial_RGB.uniforms.exposure.value = params.exposure;
 				pointShaderMaterial_RGB.uniforms.rawlerp.value = params.lerp;
@@ -537,7 +565,8 @@
 				pointShaderMaterial_RGB.uniforms.max_ev.value = params.max_ev;
 				pointShaderMaterial_RGB.uniforms.slope.value = params.slope;
 				pointShaderMaterial_RGB.uniforms.toe_power.value = params.toe_power;
-				pointShaderMaterial_RGB.uniforms.shoulder_power.value = params.shoulder_power;
+				pointShaderMaterial_RGB.uniforms.shoulder_power.value = params.shoulder_power;				
+				pointShaderMaterial_RGB.uniforms.prematrix.value = PreMatrix.clone();
 
 				pointShaderMaterial_xyY.uniforms.renderOption.value = xySwitch ? 1 : 2;
 				material709_xyY.uniforms.renderOption.value = pointShaderMaterial_xyY.uniforms.renderOption.value;
@@ -553,6 +582,7 @@
 				quad_mat.uniforms.slope.value = params.slope;
 				quad_mat.uniforms.toe_power.value = params.toe_power;
 				quad_mat.uniforms.shoulder_power.value = params.shoulder_power;
+				quad_mat.uniforms.prematrix.value = PreMatrix.clone();
 			}
 			
 			function updatePoint()
@@ -603,6 +633,18 @@
 			
 			var algorithmFolder = gui.addFolder("algorithm");
 			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updateUniforms);
+
+			algorithmFolder.add(params, 'pre_translate_x',-1, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_translate_y',-1, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_translate_z',-1, 1, 0.01).onChange(updateUniforms);
+			
+			algorithmFolder.add(params, 'pre_rotate_x',-1, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_rotate_y',-1, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_rotate_z',-1, 1, 0.01).onChange(updateUniforms);
+
+			algorithmFolder.add(params, 'pre_scale_x',-2, 2, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_scale_y',-2, 2, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_scale_z',-2, 2, 0.01).onChange(updateUniforms);
 
 			algorithmFolder.add(params, 'compressionR', 0, 0.5, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'compressionG', 0, 0.5, 0.01).onChange(updateUniforms);
