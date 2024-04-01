@@ -112,8 +112,7 @@
 				vec3 colorAtt = color;
 				vec3 preColor = (prematrix * vec4(colorAtt, 1.0)).rgb;
 
-				vec3 vColor = preColor;  //max(preColor, 0.0f);
-
+				vec3 vColor = max(preColor, 0.0f);
 				vColor *= pow(2.0f, exposure);
 				
 				vColor = apply_agx(vColor, compression, rotation);
@@ -177,7 +176,7 @@
 				vec3 vColor = texture2D(tex, vUv).rgb;
 				vColor = (prematrix * vec4(vColor, 1.0)).rgb;
 
-				//vColor = max(vColor, 0.0f);
+				vColor = max(vColor, 0.0f);
 				vColor *= pow(2.0f, exposure);				
 				vColor = apply_agx(vColor, compression, rotation);
 				vColor = apply_saturation(vColor, saturation);
@@ -457,6 +456,7 @@
 						ratio:[0,0,0],
 						image:"xmas",
 						exposure:0,
+						order:"TRS",
 						pre_translate_x:0,
 						pre_translate_y:0,
 						pre_translate_z:0,
@@ -539,8 +539,23 @@
 				var RotationAngle = new THREE.Euler( params.pre_rotate_x, params.pre_rotate_y, params.pre_rotate_z, 'XYZ');
 				var RotationMatrix = new THREE.Matrix4().makeRotationFromEuler(RotationAngle);
 				var ScaleMatrix = new THREE.Matrix4().makeScale(params.pre_scale_x, params.pre_scale_y, params.pre_scale_z);
-				var PreMatrix = ScaleMatrix.multiply(RotationMatrix).multiply(TranslationMatrix);
 
+				var PreMatrix = new THREE.Matrix4();
+				switch(params.order)
+				{
+					case 'TRS':
+						PreMatrix = ScaleMatrix.multiply(RotationMatrix).multiply(TranslationMatrix);
+						break;
+					case 'TSR':
+						PreMatrix = RotationMatrix.multiply(ScaleMatrix).multiply(TranslationMatrix);
+						break;
+					case 'RST':
+						PreMatrix = TranslationMatrix.multiply(ScaleMatrix).multiply(RotationMatrix);
+						break;
+					case 'SRT':
+						PreMatrix = TranslationMatrix.multiply(RotationMatrix).multiply(ScaleMatrix);
+						break;
+				}
 
 				pointShaderMaterial_xyY.uniforms.exposure.value = params.exposure;
 				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
@@ -633,6 +648,9 @@
 			
 			var algorithmFolder = gui.addFolder("algorithm");
 			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updateUniforms);
+
+			
+			algorithmFolder.add(params, 'order', ['TRS', 'TSR', 'RST', 'SRT']).onChange(updateUniforms);
 
 			algorithmFolder.add(params, 'pre_translate_x',-1, 1, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'pre_translate_y',-1, 1, 0.01).onChange(updateUniforms);
