@@ -457,16 +457,14 @@
 						image:"xmas",
 						exposure:0,
 						order:"SRT",
-						pre_translate_x:0,
-						pre_translate_y:0,
-						pre_translate_z:0,
-						pre_rotate_x:1,
-						pre_rotate_y:1,
-						pre_rotate_z:1,
+						pre_neutral_axis:[255,255,255],
+						pre_translate_neutral:0,
+						pre_translate_a:0,
+						pre_translate_b:0,
 						pre_rotate_angle:0,
-						pre_scale_x:1,
-						pre_scale_y:1,
-						pre_scale_z:1,
+						pre_scale_neutral:1,
+						pre_scale_a:1,
+						pre_scale_b:1,
 						compressionR:0.10,
 						compressionG:0.10,
 						compressionB:0.10,
@@ -536,27 +534,34 @@
 
 			function updateUniforms()
 			{
-				var TranslationMatrix = new THREE.Matrix4().makeTranslation(params.pre_translate_x, params.pre_translate_y, params.pre_translate_z);
-				var RotationAngle = new THREE.Euler( params.pre_rotate_x, params.pre_rotate_y, params.pre_rotate_z, 'XYZ');
-				var RotationMatrix = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(params.pre_rotate_x, params.pre_rotate_y, params.pre_rotate_z).normalize(), params.pre_rotate_angle * Math.PI / 180);
-				var ScaleMatrix = new THREE.Matrix4().makeScale(params.pre_scale_x, params.pre_scale_y, params.pre_scale_z);
+				var Quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.pre_neutral_axis[0], params.pre_neutral_axis[1], params.pre_neutral_axis[2]).normalize(), new THREE.Vector3(1, 0, 0));
+				var TranslationMatrix = new THREE.Matrix4().makeTranslation(params.pre_translate_neutral, params.pre_translate_a, params.pre_translate_b);
+				var ForwardMatrix = new THREE.Matrix4().makeRotationFromQuaternion(Quat);
+				var ReverseForwardMatrix = ForwardMatrix.clone().invert();
+				var RotationMatrix = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0).normalize(), params.pre_rotate_angle * Math.PI / 180);
+				var ScaleMatrix = new THREE.Matrix4().makeScale(params.pre_scale_neutral, params.pre_scale_a, params.pre_scale_b);
 
-				var PreMatrix = new THREE.Matrix4();
+				var PreMatrix = ForwardMatrix;
+				//PreMatrix = ReverseForwardMatrix.multiply(TranslationMatrix).multiply(ScaleMatrix).multiply(RotationMatrix).multiply(ForwardMatrix);
+				var TransformMatrix = new THREE.Matrix4();
 				switch(params.order)
 				{
 					case 'TRS':
-						PreMatrix = ScaleMatrix.multiply(RotationMatrix).multiply(TranslationMatrix);
+						TransformMatrix = ScaleMatrix.multiply(RotationMatrix).multiply(TranslationMatrix);
 						break;
 					case 'TSR':
-						PreMatrix = RotationMatrix.multiply(ScaleMatrix).multiply(TranslationMatrix);
+						TransformMatrix = RotationMatrix.multiply(ScaleMatrix).multiply(TranslationMatrix);
 						break;
 					case 'RST':
-						PreMatrix = TranslationMatrix.multiply(ScaleMatrix).multiply(RotationMatrix);
+						TransformMatrix = TranslationMatrix.multiply(ScaleMatrix).multiply(RotationMatrix);
 						break;
 					case 'SRT':
-						PreMatrix = TranslationMatrix.multiply(RotationMatrix).multiply(ScaleMatrix);
+						TransformMatrix = TranslationMatrix.multiply(RotationMatrix).multiply(ScaleMatrix);
 						break;
 				}
+				
+
+				PreMatrix = ReverseForwardMatrix.multiply(TransformMatrix).multiply(ForwardMatrix);
 
 				pointShaderMaterial_xyY.uniforms.exposure.value = params.exposure;
 				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
@@ -651,20 +656,20 @@
 			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updateUniforms);
 
 			
-			algorithmFolder.add(params, 'order', ['TRS', 'TSR', 'RST', 'SRT']).onChange(updateUniforms);
 
-			algorithmFolder.add(params, 'pre_translate_x',-1, 1, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_translate_y',-1, 1, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_translate_z',-1, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.addColor(params, 'pre_neutral_axis').onChange(updateUniforms);
+
+			algorithmFolder.add(params, 'order', ['TRS', 'TSR', 'RST', 'SRT']).onChange(updateUniforms);
 			
-			algorithmFolder.add(params, 'pre_rotate_x',0, 1, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_rotate_y',0, 1, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_rotate_z',0, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_translate_neutral',-1, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_translate_a',-1, 1, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_translate_b',-1, 1, 0.01).onChange(updateUniforms);
+			
 			algorithmFolder.add(params, 'pre_rotate_angle',-360, 360, 1).onChange(updateUniforms);
 
-			algorithmFolder.add(params, 'pre_scale_x',-2, 2, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_scale_y',-2, 2, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_scale_z',-2, 2, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_scale_neutral',-2, 2, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_scale_a',-2, 2, 0.01).onChange(updateUniforms);
+			algorithmFolder.add(params, 'pre_scale_b',-2, 2, 0.01).onChange(updateUniforms);
 
 			algorithmFolder.add(params, 'compressionR', 0, 0.5, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'compressionG', 0, 0.5, 0.01).onChange(updateUniforms);
