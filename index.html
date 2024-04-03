@@ -465,6 +465,7 @@
 						pre_scale_neutral:1,
 						pre_scale_a:1,
 						pre_scale_b:1,
+						tilt_axis:[255,255,255],
 						compressionR:0.10,
 						compressionG:0.10,
 						compressionB:0.10,
@@ -538,6 +539,8 @@
 				var TranslationMatrix = new THREE.Matrix4().makeTranslation(params.pre_translate_neutral, params.pre_translate_a, params.pre_translate_b);
 				var ForwardMatrix = new THREE.Matrix4().makeRotationFromQuaternion(Quat);
 				var ReverseForwardMatrix = ForwardMatrix.clone().invert();
+
+				
 				var RotationMatrix = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0).normalize(), params.pre_rotate_angle * Math.PI / 180);
 				var ScaleMatrix = new THREE.Matrix4().makeScale(params.pre_scale_neutral, params.pre_scale_a, params.pre_scale_b);
 
@@ -562,6 +565,11 @@
 				
 
 				PreMatrix = ReverseForwardMatrix.multiply(TransformMatrix).multiply(ForwardMatrix);
+
+				var TiltQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.tilt_axis[0], params.tilt_axis[1], params.tilt_axis[2]).normalize(), new THREE.Vector3(1, 1, 1).normalize());
+				var TiltMatrix = new THREE.Matrix4().makeRotationFromQuaternion(TiltQuat);
+
+				PreMatrix = PreMatrix.multiply(TiltMatrix);
 
 				pointShaderMaterial_xyY.uniforms.exposure.value = params.exposure;
 				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
@@ -670,6 +678,8 @@
 			algorithmFolder.add(params, 'pre_scale_neutral',-2, 2, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'pre_scale_a',-2, 2, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'pre_scale_b',-2, 2, 0.01).onChange(updateUniforms);
+
+			algorithmFolder.addColor(params, 'tilt_axis').onChange(updateUniforms);
 
 			algorithmFolder.add(params, 'compressionR', 0, 0.5, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'compressionG', 0, 0.5, 0.01).onChange(updateUniforms);
