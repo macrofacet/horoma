@@ -95,6 +95,7 @@
 			uniform vec2 whitePoint;
 
 			uniform mat4 prematrix;
+			uniform mat4 postmatrix;
 
 			uniform int renderOption;
 
@@ -102,7 +103,9 @@
 			uniform float saturation;
 			uniform float3 compression;
 			uniform float3 rotation;
+
 			uniform float rawlerp;
+			uniform int lerpOption;
 
 			varying vec3 vColorRGB;	
 
@@ -112,15 +115,27 @@
 				vec3 colorAtt = color;
 				vec3 preColor = (prematrix * vec4(colorAtt, 1.0)).rgb;
 
-				vec3 vColor = max(preColor, 0.0f);
-				vColor *= pow(2.0f, exposure);
-				
-				vColor = apply_agx(vColor, compression, rotation);
-				vColor = apply_saturation(vColor, saturation);
-				vColor = clamp(vColor, 0.0, 1.0);
+				vec3 AgXColor = max(preColor, 0.0f);
+				AgXColor *= pow(2.0f, exposure);				
+				AgXColor = apply_agx(AgXColor, compression, rotation);
+				AgXColor = clamp(AgXColor, 0.0, 1.0);
+
+				vec3 postColor = apply_saturation(AgXColor, saturation);
+				postColor = (postmatrix * vec4(postColor, 1.0)).rgb;
+				postColor = clamp(postColor, 0.0, 1.0);
+
+				vec3 vColor = postColor;
 
 				// Lerp between raw and image
-				vColor = mix(preColor, vColor, rawlerp);
+				if(lerpOption == 0){ // raw and final
+					vColor = mix(colorAtt, postColor, rawlerp);
+				} else if (lerpOption == 1){
+					vColor = mix(colorAtt, preColor, rawlerp);
+				} else if (lerpOption == 2){					
+					vColor = mix(preColor, AgXColor, rawlerp);
+				} else if (lerpOption == 3){					
+					vColor = mix(AgXColor, postColor, rawlerp);
+				}
 
 				vec3 localPos;
 
@@ -165,6 +180,7 @@
 		<script  type="x-shader/x-fragment" id="image_ps">
 			uniform sampler2D tex;
 			uniform mat4 prematrix;
+			uniform mat4 postmatrix;
 
 			uniform float exposure;
 			uniform float saturation;
@@ -181,6 +197,8 @@
 				vColor = apply_agx(vColor, compression, rotation);
 				vColor = apply_saturation(vColor, saturation);
 				vColor = clamp(vColor, 0.0, 1.0);
+
+				vColor = (postmatrix * vec4(vColor, 1.0)).rgb;
 
 				gl_FragColor = vec4(vColor, 1);
 			}
@@ -300,6 +318,7 @@
 			uniforms: {
 				tex: {value: lightsaber_loader, type:"t"},
 				prematrix:{value:new THREE.Matrix4()},
+				postmatrix:{value:new THREE.Matrix4()},
 				exposure: {value:0},
 				saturation:{value:1},
 				compression:{value:new THREE.Vector3(0, 0, 0)},
@@ -362,8 +381,10 @@
 					renderOption:{ value: 2},
 					saturation: {value: 1.0},
 					rawlerp:{value:1.0},
+					lerpOption:{ value: 0},
 					exposure:{value:1.0},
 					prematrix:{value:new THREE.Matrix4()},
+					postmatrix:{value:new THREE.Matrix4()},
 					compression:{value:new THREE.Vector3(0, 0, 0)},
 					rotation:{value:new THREE.Vector3(0,0,0)},
 					min_ev:{value:-10.0},
@@ -415,9 +436,11 @@
 					whitePoint: {value: new THREE.Vector2(0.3127, 0.3290) },
 					renderOption:{ value: 0},
 					saturation: {value: 1.0},
+					lerpOption:{ value: 0},
 					rawlerp:{value:1.0},
 					exposure:{value:1.0},
 					prematrix:{value:new THREE.Matrix4()},
+					postmatrix:{value:new THREE.Matrix4()},
 					compression:{value:new THREE.Vector3(0, 0, 0)},
 					rotation:{value:new THREE.Vector3(0,0,0)},
 					min_ev:{value:-10.0},
@@ -465,7 +488,7 @@
 						pre_scale_neutral:1,
 						pre_scale_a:1,
 						pre_scale_b:1,
-						tilt_axis:[255,255,255],
+						pre_tilt_axis:[255,255,255],
 						compressionR:0.10,
 						compressionG:0.10,
 						compressionB:0.10,
@@ -477,8 +500,10 @@
 						slope:2,
 						toe_power:3,
 						shoulder_power:3.25,
+						post_tilt_axis:[255,255,255],
 						saturation:1,
 						lerp:1,
+						lerpOption:"raw-post",
 						img_exp:0,
 						ortho:false};
 
@@ -566,10 +591,13 @@
 
 				PreMatrix = ReverseForwardMatrix.multiply(TransformMatrix).multiply(ForwardMatrix);
 
-				var TiltQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.tilt_axis[0], params.tilt_axis[1], params.tilt_axis[2]).normalize(), new THREE.Vector3(1, 1, 1).normalize());
+				var TiltQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.pre_tilt_axis[0], params.pre_tilt_axis[1], params.pre_tilt_axis[2]).normalize(), new THREE.Vector3(1, 1, 1).normalize());
 				var TiltMatrix = new THREE.Matrix4().makeRotationFromQuaternion(TiltQuat);
 
 				PreMatrix = PreMatrix.multiply(TiltMatrix);
+
+				var PostTiltQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.post_tilt_axis[0], params.post_tilt_axis[1], params.post_tilt_axis[2]).normalize(), new THREE.Vector3(1, 1, 1).normalize());
+				var PostMatrix = new THREE.Matrix4().makeRotationFromQuaternion(PostTiltQuat);
 
 				pointShaderMaterial_xyY.uniforms.exposure.value = params.exposure;
 				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
@@ -583,6 +611,8 @@
 				pointShaderMaterial_xyY.uniforms.toe_power.value = params.toe_power;
 				pointShaderMaterial_xyY.uniforms.shoulder_power.value = params.shoulder_power;
 				pointShaderMaterial_xyY.uniforms.prematrix.value = PreMatrix.clone();
+				pointShaderMaterial_xyY.uniforms.postmatrix.value = PostMatrix.clone();
+				
 
 				pointShaderMaterial_RGB.uniforms.exposure.value = params.exposure;
 				pointShaderMaterial_RGB.uniforms.rawlerp.value = params.lerp;
@@ -595,11 +625,15 @@
 				pointShaderMaterial_RGB.uniforms.slope.value = params.slope;
 				pointShaderMaterial_RGB.uniforms.toe_power.value = params.toe_power;
 				pointShaderMaterial_RGB.uniforms.shoulder_power.value = params.shoulder_power;				
-				pointShaderMaterial_RGB.uniforms.prematrix.value = PreMatrix.clone();
+				pointShaderMaterial_RGB.uniforms.prematrix.value = PreMatrix.clone();		
+				pointShaderMaterial_RGB.uniforms.postmatrix.value = PostMatrix.clone();
 
 				pointShaderMaterial_xyY.uniforms.renderOption.value = xySwitch ? 1 : 2;
 				material709_xyY.uniforms.renderOption.value = pointShaderMaterial_xyY.uniforms.renderOption.value;
 
+				var lerpOptionIndex = ['raw-post', 'raw-pre', 'pre-image', 'image-post'].indexOf(params.lerpOption);
+				pointShaderMaterial_xyY.uniforms.lerpOption.value = lerpOptionIndex;
+				pointShaderMaterial_RGB.uniforms.lerpOption.value = lerpOptionIndex;
 
 				quad_mat.uniforms.exposure.value = params.exposure;
 				quad_mat.uniforms.saturation.value = params.saturation;	
@@ -612,6 +646,7 @@
 				quad_mat.uniforms.toe_power.value = params.toe_power;
 				quad_mat.uniforms.shoulder_power.value = params.shoulder_power;
 				quad_mat.uniforms.prematrix.value = PreMatrix.clone();
+				quad_mat.uniforms.postmatrix.value = PostMatrix.clone();
 			}
 			
 			function updatePoint()
@@ -647,7 +682,7 @@
 			updateSamples();
 			updateUniforms();
 
-			var generatorFolder = gui.addFolder("generator");
+			var generatorFolder = gui.addFolder("Generator");
 
 			generatorFolder.add(params, 'generator', ['generic', 'single', 'image']).onChange(updateSamples);
 
@@ -660,27 +695,26 @@
 
 			generatorFolder.add(params, 'image', ['xmas', 'lightsaber', 'bar']).onChange(updateSamples);
 			
-			var algorithmFolder = gui.addFolder("algorithm");
+			var preFolder = gui.addFolder("Pre");
+
+			preFolder.addColor(params, 'pre_neutral_axis').onChange(updateUniforms);
+
+			preFolder.add(params, 'order', ['TRS', 'TSR', 'RST', 'SRT']).onChange(updateUniforms);
+			
+			preFolder.add(params, 'pre_translate_neutral',-1, 1, 0.01).onChange(updateUniforms);
+			preFolder.add(params, 'pre_translate_a',-1, 1, 0.01).onChange(updateUniforms);
+			preFolder.add(params, 'pre_translate_b',-1, 1, 0.01).onChange(updateUniforms);
+			
+			preFolder.add(params, 'pre_rotate_angle',-360, 360, 1).onChange(updateUniforms);
+
+			preFolder.add(params, 'pre_scale_neutral',-2, 2, 0.01).onChange(updateUniforms);
+			preFolder.add(params, 'pre_scale_a',-2, 2, 0.01).onChange(updateUniforms);
+			preFolder.add(params, 'pre_scale_b',-2, 2, 0.01).onChange(updateUniforms);
+
+			preFolder.addColor(params, 'pre_tilt_axis').onChange(updateUniforms);
+
+			var algorithmFolder = gui.addFolder("AgX");
 			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updateUniforms);
-
-			
-
-			algorithmFolder.addColor(params, 'pre_neutral_axis').onChange(updateUniforms);
-
-			algorithmFolder.add(params, 'order', ['TRS', 'TSR', 'RST', 'SRT']).onChange(updateUniforms);
-			
-			algorithmFolder.add(params, 'pre_translate_neutral',-1, 1, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_translate_a',-1, 1, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_translate_b',-1, 1, 0.01).onChange(updateUniforms);
-			
-			algorithmFolder.add(params, 'pre_rotate_angle',-360, 360, 1).onChange(updateUniforms);
-
-			algorithmFolder.add(params, 'pre_scale_neutral',-2, 2, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_scale_a',-2, 2, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'pre_scale_b',-2, 2, 0.01).onChange(updateUniforms);
-
-			algorithmFolder.addColor(params, 'tilt_axis').onChange(updateUniforms);
-
 			algorithmFolder.add(params, 'compressionR', 0, 0.5, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'compressionG', 0, 0.5, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'compressionB', 0, 0.5, 0.01).onChange(updateUniforms);
@@ -696,10 +730,12 @@
 			algorithmFolder.add(params, 'toe_power', 0, 10, 0.01).onChange(updateUniforms);
 			algorithmFolder.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updateUniforms);
 
-			gui.add(params, 'saturation', 0, 4, 0.001).onChange(updateUniforms);
+			var postFolder = gui.addFolder("Post");
+			postFolder.add(params, 'saturation', 0, 4, 0.001).onChange(updateUniforms);			
+			postFolder.addColor(params, 'post_tilt_axis').onChange(updateUniforms);
+			
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updateUniforms);
-
-			gui.add(params, 'img_exp', -10, 10, 0.01).onChange(updateUniforms);
+			gui.add(params, 'lerpOption', ['raw-post', 'raw-pre', 'pre-image', 'image-post']).onChange(updateUniforms);
 			
 			function resizeRendererToDisplaySize(renderer, camera, container) {
 				const canvas = renderer.domElement;
