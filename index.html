@@ -500,6 +500,14 @@
 						slope:2,
 						toe_power:3,
 						shoulder_power:3.25,
+						post_neutral_axis:[255,255,255],
+						post_translate_neutral:0,
+						post_translate_a:0,
+						post_translate_b:0,
+						post_rotate_angle:0,
+						post_scale_neutral:1,
+						post_scale_a:1,
+						post_scale_b:1,
 						post_tilt_axis:[255,255,255],
 						saturation:1,
 						lerp:1,
@@ -558,21 +566,18 @@
 				updatePoint();
 			}
 
-			function updateUniforms()
+			function GetTransformMatrix(axis, translation, rotation, scale, order)
 			{
-				var Quat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.pre_neutral_axis[0], params.pre_neutral_axis[1], params.pre_neutral_axis[2]).normalize(), new THREE.Vector3(1, 0, 0));
-				var TranslationMatrix = new THREE.Matrix4().makeTranslation(params.pre_translate_neutral, params.pre_translate_a, params.pre_translate_b);
+				var Quat = new THREE.Quaternion().setFromUnitVectors(axis.clone().normalize(), new THREE.Vector3(1, 0, 0));
+				var TranslationMatrix = new THREE.Matrix4().makeTranslation(translation.x, translation.y, translation.z);
 				var ForwardMatrix = new THREE.Matrix4().makeRotationFromQuaternion(Quat);
 				var ReverseForwardMatrix = ForwardMatrix.clone().invert();
 
-				
-				var RotationMatrix = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0).normalize(), params.pre_rotate_angle * Math.PI / 180);
-				var ScaleMatrix = new THREE.Matrix4().makeScale(params.pre_scale_neutral, params.pre_scale_a, params.pre_scale_b);
+				var RotationMatrix = new THREE.Matrix4().makeRotationAxis(new THREE.Vector3(1, 0, 0).normalize(), rotation * Math.PI / 180);
+				var ScaleMatrix = new THREE.Matrix4().makeScale(scale.x, scale.y, scale.z);
 
-				var PreMatrix = ForwardMatrix;
-				//PreMatrix = ReverseForwardMatrix.multiply(TranslationMatrix).multiply(ScaleMatrix).multiply(RotationMatrix).multiply(ForwardMatrix);
 				var TransformMatrix = new THREE.Matrix4();
-				switch(params.order)
+				switch(order)
 				{
 					case 'TRS':
 						TransformMatrix = ScaleMatrix.multiply(RotationMatrix).multiply(TranslationMatrix);
@@ -588,16 +593,32 @@
 						break;
 				}
 				
+				return ReverseForwardMatrix.multiply(TransformMatrix).multiply(ForwardMatrix).clone();
+			}
 
-				PreMatrix = ReverseForwardMatrix.multiply(TransformMatrix).multiply(ForwardMatrix);
+			function updateUniforms()
+			{
+				var PreMatrix = GetTransformMatrix(new THREE.Vector3(params.pre_neutral_axis[0], params.pre_neutral_axis[1], params.pre_neutral_axis[2]),
+													new THREE.Vector3(params.pre_translate_neutral, params.pre_translate_a, params.pre_translate_b),
+													params.pre_rotate_angle,
+													new THREE.Vector3(params.pre_scale_neutral, params.pre_scale_a, params.pre_scale_b),
+													params.order);
 
-				var TiltQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.pre_tilt_axis[0], params.pre_tilt_axis[1], params.pre_tilt_axis[2]).normalize(), new THREE.Vector3(1, 1, 1).normalize());
-				var TiltMatrix = new THREE.Matrix4().makeRotationFromQuaternion(TiltQuat);
+				var PreTiltQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.pre_tilt_axis[0], params.pre_tilt_axis[1], params.pre_tilt_axis[2]).normalize(), new THREE.Vector3(1, 1, 1).normalize());
+				var PreTiltMatrix = new THREE.Matrix4().makeRotationFromQuaternion(PreTiltQuat);
 
-				PreMatrix = PreMatrix.multiply(TiltMatrix);
+				PreMatrix = PreMatrix.multiply(PreTiltMatrix);
+
+				var PostMatrix = GetTransformMatrix(new THREE.Vector3(params.post_neutral_axis[0], params.post_neutral_axis[1], params.post_neutral_axis[2]),
+													new THREE.Vector3(params.post_translate_neutral, params.post_translate_a, params.post_translate_b),
+													params.post_rotate_angle,
+													new THREE.Vector3(params.post_scale_neutral, params.post_scale_a, params.post_scale_b),
+													params.order);
 
 				var PostTiltQuat = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(params.post_tilt_axis[0], params.post_tilt_axis[1], params.post_tilt_axis[2]).normalize(), new THREE.Vector3(1, 1, 1).normalize());
-				var PostMatrix = new THREE.Matrix4().makeRotationFromQuaternion(PostTiltQuat);
+				var PostTiltMatrix = new THREE.Matrix4().makeRotationFromQuaternion(PostTiltQuat);
+
+				PostMatrix = PostMatrix.multiply(PostTiltMatrix);
 
 				pointShaderMaterial_xyY.uniforms.exposure.value = params.exposure;
 				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
@@ -731,7 +752,23 @@
 			algorithmFolder.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updateUniforms);
 
 			var postFolder = gui.addFolder("Post");
-			postFolder.add(params, 'saturation', 0, 4, 0.001).onChange(updateUniforms);			
+			postFolder.add(params, 'saturation', 0, 4, 0.001).onChange(updateUniforms);		
+			
+			postFolder.addColor(params, 'post_neutral_axis').onChange(updateUniforms);
+
+			postFolder.add(params, 'order', ['TRS', 'TSR', 'RST', 'SRT']).onChange(updateUniforms);
+
+			postFolder.add(params, 'post_translate_neutral',-2, 2, 0.01).onChange(updateUniforms);
+			postFolder.add(params, 'post_translate_a',-1, 1, 0.01).onChange(updateUniforms);
+			postFolder.add(params, 'post_translate_b',-1, 1, 0.01).onChange(updateUniforms);
+
+			postFolder.add(params, 'post_rotate_angle',-360, 360, 1).onChange(updateUniforms);
+
+			postFolder.add(params, 'post_scale_neutral',-2, 2, 0.01).onChange(updateUniforms);
+			postFolder.add(params, 'post_scale_a',-2, 2, 0.01).onChange(updateUniforms);
+			postFolder.add(params, 'post_scale_b',-2, 2, 0.01).onChange(updateUniforms);
+		
+
 			postFolder.addColor(params, 'post_tilt_axis').onChange(updateUniforms);
 			
 			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updateUniforms);
