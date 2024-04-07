@@ -6,7 +6,7 @@ export default /*glsl*/`
 #define PI 3.14159265359
 #define lerp mix
 
-#define saturate(a) clamp(a, 0.0f, 1.0f)
+#define saturate(a) clamp(a, 0.0, 1.0)
 
 float3x3 inv_f33(float3x3 m) {
     float d = m[0].x * (m[1].y * m[2].z - m[2].y * m[1].z) -
