@@ -115,8 +115,8 @@
 				vec3 colorAtt = color;
 				vec3 preColor = (prematrix * vec4(colorAtt, 1.0)).rgb;
 
-				vec3 AgXColor = max(preColor, 0.0f);
-				AgXColor *= pow(2.0f, exposure);				
+				vec3 AgXColor = max(preColor, 0.0);
+				AgXColor *= pow(2.0, exposure);				
 				AgXColor = apply_agx(AgXColor, compression, rotation);
 				AgXColor = clamp(AgXColor, 0.0, 1.0);
 
@@ -192,8 +192,8 @@
 				vec3 vColor = texture2D(tex, vUv).rgb;
 				vColor = (prematrix * vec4(vColor, 1.0)).rgb;
 
-				vColor = max(vColor, 0.0f);
-				vColor *= pow(2.0f, exposure);				
+				vColor = max(vColor, 0.0);
+				vColor *= pow(2.0, exposure);				
 				vColor = apply_agx(vColor, compression, rotation);
 				vColor = apply_saturation(vColor, saturation);
 				vColor = clamp(vColor, 0.0, 1.0);
