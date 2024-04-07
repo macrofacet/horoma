@@ -12,7 +12,7 @@ float3x3 inv_f33(float3x3 m) {
     float d = m[0].x * (m[1].y * m[2].z - m[2].y * m[1].z) -
                 m[0].y * (m[1].x * m[2].z - m[1].z * m[2].x) +
                 m[0].z * (m[1].x * m[2].y - m[1].y * m[2].x);
-    float id = 1.0f / d;
+    float id = 1.0 / d;
     float3x3 c = float3x3(1,0,0,0,1,0,0,0,1);
     c[0].x = id * (m[1].y * m[2].z - m[2].y * m[1].z);
     c[0].y = id * (m[0].z * m[2].y - m[0].y * m[2].z);
