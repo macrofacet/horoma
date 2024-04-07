@@ -222,7 +222,7 @@ float3 apply_agx(float3 rgb, float3 compression, float3 rotation)
 
 float3 apply_saturation(float3 rgb, float saturation)
 {
-    vec3 wgt = vec3(0.2126729f,  0.7151522f,  0.0721750f); // srgb luminance
+    vec3 wgt = vec3(0.2126729,  0.7151522,  0.0721750); // srgb luminance
     vec3 des = vec3(dot(rgb, wgt));
     return mix(des, rgb, saturation);
 }
