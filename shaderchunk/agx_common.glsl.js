@@ -48,12 +48,12 @@ float3 XYZ_to_xyY(float3 xyz, float2 whitepoint)
 }
 float3 xyY_to_XYZ(float3 xyY)
 {
-    if(xyY.y == 0.0f)
+    if(xyY.y == 0.0)
         return float3(0, 0, 0);
 
     float Y = xyY.z;
     float X = (xyY.x * Y) / xyY.y;
-    float Z = ((1.0f - xyY.x - xyY.y) * Y) / xyY.y;
+    float Z = ((1.0 - xyY.x - xyY.y) * Y) / xyY.y;
 
     return float3(X, Y, Z);
 }
@@ -73,7 +73,7 @@ float3x3 primaries_to_matrix(float2 xy_red, float2 xy_green, float2 xy_blue, flo
     
     float3x3 temp = float3x3(
                 XYZ_red.x,	XYZ_green.x,	XYZ_blue.x,
-                1.0f,	1.0f,	1.0f,
+                1.0,	1.0,	1.0,
                 XYZ_red.z,	XYZ_green.z,	XYZ_blue.z);
 
     float3x3 inverse = inv_f33(temp);
@@ -88,19 +88,19 @@ float3x3 primaries_to_matrix(float2 xy_red, float2 xy_green, float2 xy_blue, flo
 
 float RotationToSlide(float2 primary, float2 neighborA, float2 neighborB, float angle)
 {
-	float2 neighbor = angle >= 0.0f ? neighborA : neighborB;
+	float2 neighbor = angle >= 0.0 ? neighborA : neighborB;
 
 	float distance_to_neighbor = distance(primary, neighbor);
 	float distance_to_center = length(primary);
 
-	float side = sin(angle / 180.0f * PI) * distance_to_center;
+	float side = sin(angle / 180.0 * PI) * distance_to_center;
 
 	return side / distance_to_neighbor; 
 }
 
 float2 SlidePrimary(float2 primary, float2 neighborA, float2 neighborB, float amount)
 {
-	return lerp(primary, amount >= 0.0f ? neighborA : neighborB, saturate(abs(amount)));
+	return lerp(primary, amount >= 0.0 ? neighborA : neighborB, saturate(abs(amount)));
 }
 
 float3x3 ComputeCompressionMatrix(float2 xyR, float2 xyG, float2 xyB, float2 xyW, float3 compression, float3 rotation)
@@ -114,7 +114,7 @@ float3x3 ComputeCompressionMatrix(float2 xyR, float2 xyG, float2 xyB, float2 xyW
 	slide.g = RotationToSlide(offsetG, offsetR, offsetB, rotation.g);
 	slide.b = RotationToSlide(offsetB, offsetG, offsetR, rotation.b);
 
-	float3 scale_factor = 1.0f / (1.0f - compression);	
+	float3 scale_factor = 1.0 / (1.0 - compression);	
 
 	float2 R = (SlidePrimary(offsetR, offsetB, offsetG, slide.r) * scale_factor.r) + xyW;
 	float2 G = (SlidePrimary(offsetG, offsetR, offsetB, slide.g) * scale_factor.g) + xyW;
@@ -127,7 +127,7 @@ float3x3 ComputeCompressionMatrix(float2 xyR, float2 xyG, float2 xyB, float2 xyW
 
 float3 open_domain_to_normalized_log2(float3 in_od, float minimum_ev, float maximum_ev)
 {
-    const float middle_grey = 0.18f;
+    const float middle_grey = 0.18;
     float total_exposure = maximum_ev - minimum_ev;
 
     float3 output_log = clamp(log2(in_od / middle_grey), minimum_ev, maximum_ev);
@@ -143,7 +143,7 @@ float equation_scale(float x_pivot, float y_pivot, float slope_pivot, float powe
 
 float equation_hyperbolic(float x, float power)
 {
-    return x / pow(1.0 + pow(x, power), 1.0f / power);
+    return x / pow(1.0 + pow(x, power), 1.0 / power);
 }
 
 float equation_term(float x, float x_pivot, float slope_pivot, float scale)
@@ -153,7 +153,7 @@ float equation_term(float x, float x_pivot, float slope_pivot, float scale)
 
 float equation_curve(float x, float x_pivot, float y_pivot, float slope_pivot, float toe_power, float shoulder_power, float scale)
 {
-    if(scale < 0.0f)
+    if(scale < 0.0)
     {
         return scale * equation_hyperbolic(equation_term(x, x_pivot, slope_pivot, scale), toe_power) + y_pivot;
     }
@@ -165,8 +165,8 @@ float equation_curve(float x, float x_pivot, float y_pivot, float slope_pivot, f
 
 float equation_full_curve(float x, float x_pivot, float y_pivot, float slope_pivot, float toe_power, float shoulder_power)
 {
-    float scale_x_pivot = x >= x_pivot ? 1.0f - x_pivot : x_pivot;
-    float scale_y_pivot = x >= x_pivot ? 1.0f - y_pivot : y_pivot;
+    float scale_x_pivot = x >= x_pivot ? 1.0 - x_pivot : x_pivot;
+    float scale_y_pivot = x >= x_pivot ? 1.0 - y_pivot : y_pivot;
 
     float toe_scale = equation_scale(scale_x_pivot, scale_y_pivot, slope_pivot, toe_power);
     float shoulder_scale = equation_scale(scale_x_pivot, scale_y_pivot, slope_pivot, shoulder_power);				
@@ -201,14 +201,14 @@ float3 apply_agx(float3 rgb, float3 compression, float3 rotation)
     float3 xyz = mul(sRGB_to_XYZ, rgb);
     float3 ajustedRGB = mul(XYZ_to_adjusted, xyz);
 
-    //const float slope = 2.3f;
-    //const float toe_power = 1.9f;
-    //const float shoulder_power = 3.1f;
-    //const float min_ev = -10.0f;
-    //const float max_ev = 6.5f;
+    //const float slope = 2.3;
+    //const float toe_power = 1.9;
+    //const float shoulder_power = 3.1;
+    //const float min_ev = -10.0;
+    //const float max_ev = 6.5;
 
     float x_pivot = abs(min_ev) / (max_ev - min_ev);
-    float y_pivot = 0.5f;
+    float y_pivot = 0.5;
 
     float3 log = open_domain_to_normalized_log2(ajustedRGB, min_ev, max_ev);
 
