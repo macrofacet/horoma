@@ -547,6 +547,7 @@
 							case "bar": sourceData = images.bar; loader = bluebar_loader; break;
 							case "xmas": default: sourceData = images.xmas; loader = xmas_loader; break;
 						}
+						loader.magFilter = loader.minFilter = THREE.NearestFilter;
 						quad_mat.uniforms.tex.value = loader;
 						mesh.scale.x = loader.source.data.width/loader.source.data.height;
 
