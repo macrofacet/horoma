@@ -262,21 +262,24 @@
 			
 			import agx_common from './shaderchunk/agx_common.glsl.js'
 
-			var images = {};
+			var images = { loadCount: 0, numImages: 3 };
 
 			var xmas_loader = new EXRLoader().setDataType(THREE.FloatType)
 			.load( "./images/red_xmas_rec709.exr", function ( texture, textureData ) {
 							images.xmas = textureData.data;
-						});
+							images.loadCount += 1;
+							});
 			var lightsaber_loader = new EXRLoader().setDataType(THREE.FloatType)
 			.load( "./images/mery_lightSaber_lin_srgb.exr", function ( texture, textureData ) {
 							images.lightsaber = textureData.data;
-						});
+							images.loadCount += 1;
+							});
 
 			var bluebar_loader = new EXRLoader().setDataType(THREE.FloatType)
 			.load( "./images/blue_bar_709.exr", function ( texture, textureData ) {
 							images.bar = textureData.data;
-						});
+							images.loadCount += 1;
+							});
 						
 
 			var aspect = 1.0;
@@ -316,7 +319,7 @@
 			// IMAGE SCENE
 			var quad_mat = new THREE.ShaderMaterial( {
 			uniforms: {
-				tex: {value: lightsaber_loader, type:"t"},
+				tex: {value: null, type:"t"},
 				prematrix:{value:new THREE.Matrix4()},
 				postmatrix:{value:new THREE.Matrix4()},
 				exposure: {value:0},
@@ -471,13 +474,13 @@
 			var xySwitch = false;
 
 			var params = { 
-						generator:"generic",
+						generator:"image",
 						steps:1,
 						start:-10,
 						range:20,
 						substeps:1,
 						ratio:[0,0,0],
-						image:"xmas",
+						image:"lightsaber",
 						exposure:0,
 						order:"SRT",
 						pre_neutral_axis:[255,255,255],
@@ -701,9 +704,6 @@
 				}
 			}
 
-			updateSamples();
-			updateUniforms();
-
 			var generatorFolder = gui.addFolder("Generator");
 
 			generatorFolder.add(params, 'generator', ['generic', 'single', 'image']).onChange(updateSamples);
@@ -786,8 +786,17 @@
 				}
 			}
 
+
+
 			function render() {
 				
+				if(images.loadCount == images.numImages)
+				{	
+					updateSamples();
+					updateUniforms();
+					images.loadCount = 0;
+				}
+
 				requestAnimationFrame( render );
 				resizeRendererToDisplaySize(ImageRenderer, perspCamera_Image, document.getElementById("imageView"));
 				resizeRendererToDisplaySize(xyYrenderer, perspCamera_xyY, document.getElementById("xyYView"));
