@@ -280,7 +280,8 @@
 							images.bar = textureData.data;
 							images.loadCount += 1;
 							});
-						
+			
+			var custom_texture = new THREE.DataTexture();
 
 			var aspect = 1.0;
 
@@ -336,6 +337,53 @@
 			vertexShader: document.getElementById( 'image_vs' ).textContent,
 			fragmentShader: agx_common + "\n" + document.getElementById( 'image_ps' ).textContent
 			} );
+
+			const dropArea = document.getElementById('top');
+
+			dropArea.addEventListener('dragover', (event) => {
+				event.stopPropagation();
+				event.preventDefault();
+				// Style the drag-and-drop as a "copy file" operation.
+				event.dataTransfer.dropEffect = 'copy';
+			});
+
+			dropArea.addEventListener('drop', (event) => {
+				event.stopPropagation();
+				event.preventDefault();
+				const fileList = event.dataTransfer.files;
+				if(fileList.length)
+				{
+					var file = fileList[0];
+					if (!file.name.endsWith("exr")) {
+						alert("Unsupported file type. Please select a EXR file.");
+						return;
+					}
+					// Read the file
+					const reader = new FileReader();
+
+					reader.onload = () => {
+						custom_texture = new THREE.DataTexture();
+						let tex = new EXRLoader().setDataType(THREE.FloatType).parse(reader.result);
+						custom_texture.image.data = tex.data;
+						custom_texture.image.width = tex.width;
+						custom_texture.image.height = tex.height;
+						custom_texture.type = tex.type;
+						custom_texture.format = tex.format;
+						custom_texture.needsUpdate = true;
+
+						// Update UI and all
+						params.generator = "image";
+						params.image = "custom";
+						updateSamples();
+					};
+					reader.onerror = () => {
+						alert("Error reading the file. Please cry in a corner.");
+					};
+
+					reader.readAsArrayBuffer(file);
+				}
+			});
+
 
 			const quad = new THREE.PlaneGeometry( 1, 1 );
 			const mesh = new THREE.Mesh( quad, quad_mat );
@@ -542,17 +590,20 @@
 					break;
 					
 					case 'image' :
-						var sourceData = null;
-						var loader = null;
+						var texture = null;
 						switch(params.image)
 						{
-							case "lightsaber": sourceData = images.lightsaber; loader = lightsaber_loader; break;
-							case "bar": sourceData = images.bar; loader = bluebar_loader; break;
-							case "xmas": default: sourceData = images.xmas; loader = xmas_loader; break;
+							case "lightsaber": texture = lightsaber_loader; break;
+							case "bar": texture = bluebar_loader; break;
+							case "xmas": texture = xmas_loader; break;
+							case "custom": texture = custom_texture; break;
+							default : return;
 						}
-						loader.magFilter = loader.minFilter = THREE.NearestFilter;
-						quad_mat.uniforms.tex.value = loader;
-						mesh.scale.x = loader.source.data.width/loader.source.data.height;
+
+						var sourceData = texture.image.data;
+						texture.magFilter = texture.minFilter = THREE.NearestFilter;
+						quad_mat.uniforms.tex.value = texture;
+						mesh.scale.x = texture.source.data.width/texture.source.data.height;
 
 						for(var i = 0; i < sourceData.length; i+=4)
 						{
@@ -673,7 +724,7 @@
 				quad_mat.uniforms.prematrix.value = PreMatrix.clone();
 				quad_mat.uniforms.postmatrix.value = PostMatrix.clone();
 			}
-			
+
 			function updatePoint()
 			{	
 				Inset.setCompressionMatrix(params.compression);
@@ -715,7 +766,7 @@
 
 			generatorFolder.addColor(params, 'ratio').onChange(updateSamples);
 
-			generatorFolder.add(params, 'image', ['xmas', 'lightsaber', 'bar']).onChange(updateSamples);
+			generatorFolder.add(params, 'image', ['xmas', 'lightsaber', 'bar', 'custom']).onChange(updateSamples);
 			
 			var preFolder = gui.addFolder("Pre");
 
