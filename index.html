@@ -65,8 +65,7 @@
 			{
 			  "imports": {
 				"three": "https://cdn.skypack.dev/three@0.142.0",
-				"three/": "https://cdn.skypack.dev/three@0.142.0/",
-				"dat.gui": "https://cdn.skypack.dev/dat.gui"
+				"three/": "https://cdn.skypack.dev/three@0.142.0/"
 			  }
 			}
 		  </script>
@@ -253,7 +252,7 @@
 			import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
 			import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader";
 
-			import dat from "dat.gui";
+			import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.5/dist/tweakpane.min.js';
 
 
 			import * as Utils from './js/utils.js'
@@ -527,11 +526,11 @@
 						start:-10,
 						range:20,
 						substeps:1,
-						ratio:[0,0,0],
+						ratio:{r:0,g:0,b:0},
 						image:"lightsaber",
 						exposure:0,
 						order:"SRT",
-						pre_neutral_axis:[255,255,255],
+						pre_neutral_axis:{r:255,g:255,b:255},
 						pre_translate_neutral:0,
 						pre_translate_a:0,
 						pre_translate_b:0,
@@ -539,19 +538,15 @@
 						pre_scale_neutral:1,
 						pre_scale_a:1,
 						pre_scale_b:1,
-						pre_tilt_axis:[255,255,255],
-						compressionR:0.10,
-						compressionG:0.10,
-						compressionB:0.10,
-						rotationR:0,
-						rotationG:0,
-						rotationB:0,
+						pre_tilt_axis:{r:255,g:255,b:255},
+						compression:{x:0.10, y:0.10, z:0.10},
+						rotation:{x:0, y: 0, z: 0},
 						min_ev:-10,
 						max_ev:6.5,
 						slope:2,
 						toe_power:3,
 						shoulder_power:3.25,
-						post_neutral_axis:[255,255,255],
+						post_neutral_axis:{r:255,g:255,b:255},
 						post_translate_neutral:0,
 						post_translate_a:0,
 						post_translate_b:0,
@@ -559,14 +554,14 @@
 						post_scale_neutral:1,
 						post_scale_a:1,
 						post_scale_b:1,
-						post_tilt_axis:[255,255,255],
+						post_tilt_axis:{r:255,g:255,b:255},
 						saturation:1,
 						lerp:1,
 						lerpOption:"raw-post",
 						img_exp:0,
 						ortho:false};
 
-			var gui = new dat.GUI();
+			var gui = new Pane({title:"Parameters"});
 
 			var samples = [];
 			function updateSamples()
@@ -679,8 +674,8 @@
 				pointShaderMaterial_xyY.uniforms.rawlerp.value = params.lerp;
 				pointShaderMaterial_xyY.uniforms.saturation.value = params.saturation;
 				
-				pointShaderMaterial_xyY.uniforms.compression.value = new THREE.Vector3(params.compressionR, params.compressionG, params.compressionB);
-				pointShaderMaterial_xyY.uniforms.rotation.value = new THREE.Vector3(params.rotationR, params.rotationG, params.rotationB);
+				pointShaderMaterial_xyY.uniforms.compression.value = new THREE.Vector3(params.compression.x, params.compression.y, params.compression.z);
+				pointShaderMaterial_xyY.uniforms.rotation.value = new THREE.Vector3(params.rotation.x, params.rotation.y, params.rotation.z);
 				pointShaderMaterial_xyY.uniforms.min_ev.value = params.min_ev;
 				pointShaderMaterial_xyY.uniforms.max_ev.value = params.max_ev;
 				pointShaderMaterial_xyY.uniforms.slope.value = params.slope;
@@ -694,8 +689,8 @@
 				pointShaderMaterial_RGB.uniforms.rawlerp.value = params.lerp;
 				pointShaderMaterial_RGB.uniforms.saturation.value = params.saturation;
 				
-				pointShaderMaterial_RGB.uniforms.compression.value = new THREE.Vector3(params.compressionR, params.compressionG, params.compressionB);
-				pointShaderMaterial_RGB.uniforms.rotation.value = new THREE.Vector3(params.rotationR, params.rotationG, params.rotationB);
+				pointShaderMaterial_RGB.uniforms.compression.value = new THREE.Vector3(params.compression.x, params.compression.y, params.compression.z);
+				pointShaderMaterial_RGB.uniforms.rotation.value = new THREE.Vector3(params.rotation.x, params.rotation.y, params.rotation.z);
 				pointShaderMaterial_RGB.uniforms.min_ev.value = params.min_ev;
 				pointShaderMaterial_RGB.uniforms.max_ev.value = params.max_ev;
 				pointShaderMaterial_RGB.uniforms.slope.value = params.slope;
@@ -714,8 +709,8 @@
 				quad_mat.uniforms.exposure.value = params.exposure;
 				quad_mat.uniforms.saturation.value = params.saturation;	
 
-				quad_mat.uniforms.compression.value = new THREE.Vector3(params.compressionR, params.compressionG, params.compressionB);
-				quad_mat.uniforms.rotation.value = new THREE.Vector3(params.rotationR, params.rotationG, params.rotationB);
+				quad_mat.uniforms.compression.value = new THREE.Vector3(params.compression.x, params.compression.y, params.compression.z);
+				quad_mat.uniforms.rotation.value = new THREE.Vector3(params.rotation.x, params.rotation.y, params.rotation.z);
 				quad_mat.uniforms.min_ev.value = params.min_ev;
 				quad_mat.uniforms.max_ev.value = params.max_ev;
 				quad_mat.uniforms.slope.value = params.slope;
@@ -750,25 +745,41 @@
 				pointCloudGeo.setAttribute( 'color', new THREE.Float32BufferAttribute( colors, 3 ) );
 				pointCloudGeo.computeBoundingSphere();
 
-				for (var i in gui.__controllers) {
-					gui.__controllers[i].updateDisplay();
-				}
+				gui.refresh();
 			}
 
-			var generatorFolder = gui.addFolder("Generator");
+			/*
+			gui.addBinding(params, 'generator', {options: {generic:'generic', single:'single', image:'image'}}).on('change', (e) => {
+				genericGeneratorFolder.hidden = true;
+				singleGeneratorFolder.hidden = true;
+				imageGeneratorFolder.hidden = true;
 
-			generatorFolder.add(params, 'generator', ['generic', 'single', 'image']).onChange(updateSamples);
+				switch(e.value) 
+				{
+					case "generic" : genericGeneratorFolder.hidden = false; break;
+					case "single" : singleGeneratorFolder.hidden = false; break;
+					case "image" : imageGeneratorFolder.hidden = false; break;
+				}
+			});
 
-			generatorFolder.add(params, 'steps', 1, 20, 1).onChange(updateSamples);
-			generatorFolder.add(params, 'start', -20, 20, 1).onChange(updateSamples);
-			generatorFolder.add(params, 'range', 0, 20, 1).onChange(updateSamples);
-			generatorFolder.add(params, 'substeps', 1, 20, 1).onChange(updateSamples);
+			var genericGeneratorFolder = gui.addFolder({title:"Generic"});
+			genericGeneratorFolder.addBinding(params, 'steps', {min:1, max:20, step:1}).on('change', updateSamples);
+			genericGeneratorFolder.addBinding(params, 'start', {min:-20, max:20, step:1}).on('change', updateSamples);
+			genericGeneratorFolder.addBinding(params, 'range', {min:0, max:20, step:1}).on('change', updateSamples);
+			genericGeneratorFolder.addBinding(params, 'substeps', {min:1, max:20, step:1}).on('change', updateSamples);
+			genericGeneratorFolder.hidden = true;
 
-			generatorFolder.addColor(params, 'ratio').onChange(updateSamples);
+			var singleGeneratorFolder = gui.addFolder({title:"Single"});
+			singleGeneratorFolder.addBinding(params, 'ratio').on('change', updateSamples);
+			singleGeneratorFolder.hidden = true;
 
-			generatorFolder.add(params, 'image', ['xmas', 'lightsaber', 'bar', 'custom']).onChange(updateSamples);
+			var imageGeneratorFolder = gui.addFolder({title:"Image"});
+			*/
+			gui.addBinding(params, 'image', {options:{xmas:'xmas', lightsaber:'lightsaber', bar:'bar', custom:'custom'}}).on('change', updateSamples);
 			
-			var preFolder = gui.addFolder("Pre");
+			
+			/*
+			var preFolder = gui.addFolder({title:"Pre"});
 
 			preFolder.addColor(params, 'pre_neutral_axis').onChange(updateUniforms);
 
@@ -785,25 +796,22 @@
 			preFolder.add(params, 'pre_scale_b',-2, 2, 0.01).onChange(updateUniforms);
 
 			preFolder.addColor(params, 'pre_tilt_axis').onChange(updateUniforms);
+			*/
 
-			var algorithmFolder = gui.addFolder("AgX");
-			algorithmFolder.add(params, 'exposure', -20, 20, 0.1).onChange(updateUniforms);
-			algorithmFolder.add(params, 'compressionR', 0, 0.5, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'compressionG', 0, 0.5, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'compressionB', 0, 0.5, 0.01).onChange(updateUniforms);
-
-			algorithmFolder.add(params, 'rotationR', -10, 10, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'rotationG', -10, 10, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'rotationB', -10, 10, 0.01).onChange(updateUniforms);
+			var algorithmFolder = gui.addFolder({title:"AgX"});
+			algorithmFolder.addBinding(params, 'exposure', {min:-20, max:20, step:0.1}).on('change', updateUniforms);
+			algorithmFolder.addBinding(params, 'compression', {min:0, max:0.5, step:0.01}).on('change', updateUniforms);
+			algorithmFolder.addBinding(params, 'rotation', {min:-10, max:10, step:0.01}).on('change', updateUniforms);
 			
-			algorithmFolder.add(params, 'min_ev', -20, 20, 0.1).onChange(updateUniforms);
-			algorithmFolder.add(params, 'max_ev', 0, 20, 0.1).onChange(updateUniforms);
+			algorithmFolder.addBinding(params, 'min_ev', {min:-20, max:20, step:0.1}).on('change', updateUniforms);
+			algorithmFolder.addBinding(params, 'max_ev', {min:0, max:20, step:0.1}).on('change', updateUniforms);
 
-			algorithmFolder.add(params, 'slope', 0, 10, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'toe_power', 0, 10, 0.01).onChange(updateUniforms);
-			algorithmFolder.add(params, 'shoulder_power', 0, 10, 0.01).onChange(updateUniforms);
-
-			var postFolder = gui.addFolder("Post");
+			algorithmFolder.addBinding(params, 'slope', {min:0, max:10, step:0.01}).on('change', updateUniforms);
+			algorithmFolder.addBinding(params, 'toe_power', {min:0, max:10, step:0.01}).on('change', updateUniforms);
+			algorithmFolder.addBinding(params, 'shoulder_power', {min:0, max:10, step:0.01}).on('change', updateUniforms);
+			
+			/*
+			var postFolder = gui.addFolder({title:"Post"});
 			postFolder.add(params, 'saturation', 0, 4, 0.001).onChange(updateUniforms);		
 			
 			postFolder.addColor(params, 'post_neutral_axis').onChange(updateUniforms);
@@ -819,13 +827,14 @@
 			postFolder.add(params, 'post_scale_neutral',-2, 2, 0.01).onChange(updateUniforms);
 			postFolder.add(params, 'post_scale_a',-2, 2, 0.01).onChange(updateUniforms);
 			postFolder.add(params, 'post_scale_b',-2, 2, 0.01).onChange(updateUniforms);
-		
-
+			
 			postFolder.addColor(params, 'post_tilt_axis').onChange(updateUniforms);
 			
-			gui.add(params, 'lerp', 0, 1, 0.01).onChange(updateUniforms);
-			gui.add(params, 'lerpOption', ['raw-post', 'raw-pre', 'pre-image', 'image-post']).onChange(updateUniforms);
+			*/
+			gui.addBinding(params, 'lerp', {min:0, max:1, step:0.01}).on('change', updateUniforms);
+			//gui.addBinding(params, 'lerpOption', {options:{raw_post:'raw-post', raw_pre:'raw-pre', pre_image:'pre-image', image_post:'image-post'}}).on('change', updateUniforms);
 			
+
 			function resizeRendererToDisplaySize(renderer, camera, container) {
 				const canvas = renderer.domElement;
 				const width = canvas.clientWidth;
