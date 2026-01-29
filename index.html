@@ -64,8 +64,9 @@
 		<script type="importmap">
 			{
 			  "imports": {
-				"three": "https://cdn.skypack.dev/three@0.142.0",
-				"three/": "https://cdn.skypack.dev/three@0.142.0/"
+				"three": "https://cdn.jsdelivr.net/npm/three@0.142.0/build/three.module.js",
+				"three/addons/": "https://cdn.jsdelivr.net/npm/three@0.142.0/examples/jsm/",
+				"dat.gui": "https://cdn.jsdelivr.net/npm/dat.gui@0.7.9/build/dat.gui.min.js"
 			  }
 			}
 		  </script>
@@ -249,8 +250,8 @@
 
 		<script type="module">
 			import * as THREE from "three";
-			import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
-			import { EXRLoader } from "three/examples/jsm/loaders/EXRLoader";
+			import { OrbitControls } from "three/addons/controls/OrbitControls";
+			import { EXRLoader } from "three/addons/loaders/EXRLoader";
 
 			import {Pane} from 'https://cdn.jsdelivr.net/npm/tweakpane@4.0.5/dist/tweakpane.min.js';
 
@@ -890,3 +891,4 @@
 		</script>
 	</body>
 </html>
+
