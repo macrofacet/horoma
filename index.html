@@ -482,7 +482,7 @@
 			const xyYpoints = [];
 			for(var i = 0; i < xyzPoints.length; i++)
 			{
-				xyYpoints.push( new THREE.Vector3(xyzPoints[i].y/sum[i], xyzPoints[i].y, xyzPoints[i].x/sum[i] ) );
+				xyYpoints.push( new THREE.Vector3(xyzPoints[i].x/sum[i], xyzPoints[i].y, xyzPoints[i].y/sum[i] ) );
 			}
 			const xyYLineGeometry = new THREE.BufferGeometry().setFromPoints( xyYpoints );
 			const xyYline = new THREE.Line( xyYLineGeometry, lineMaterial );
