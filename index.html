@@ -462,8 +462,8 @@
 			controls_xyY.damping = 0.2;
 			controls_xyY.update();
 
-			const material = new THREE.LineBasicMaterial( { color: 0xFFFFFF } );
-			const points = [];
+			const lineMaterial = new THREE.LineBasicMaterial( { color: 0xFFFFFF } );
+			const xyYpoints = [];
 			
 			var sum = [];
 			for(var i = 0; i < cmfData.high - cmfData.low; i++)
@@ -473,11 +473,24 @@
 
 			for(var i = 0; i < cmfData.high - cmfData.low; i++)
 			{
-				points.push( new THREE.Vector3(cmfData.y[i]/sum[i], cmfData.y[i], cmfData.x[i]/sum[i] ) );
+				xyYpoints.push( new THREE.Vector3(cmfData.y[i]/sum[i], cmfData.y[i], cmfData.x[i]/sum[i] ) );
 			}
-			const geometry = new THREE.BufferGeometry().setFromPoints( points );
-			const line = new THREE.Line( geometry, material );
-			xyYscene.add( line );
+			const xyYLineGeometry = new THREE.BufferGeometry().setFromPoints( xyYpoints );
+			const xyYline = new THREE.Line( xyYLineGeometry, lineMaterial );
+			xyYscene.add( xyYline );
+
+			
+			const rgbLineMaterial = new THREE.LineBasicMaterial( { color: 0xFFFFFF } );
+			const rbgPoints = [];
+			const xyz_to_srgb = Utils.sRGB_to_XYZ.clone().invert();
+			for(var i = 0; i < cmfData.high - cmfData.low; i++)
+			{
+				var v = new THREE.Vector3(cmfData.x[i], cmfData.y[i], cmfData.z[i]);
+				rbgPoints.push(v.applyMatrix3(xyz_to_srgb));
+			}
+			const rgbgeometry = new THREE.BufferGeometry().setFromPoints( rbgPoints );
+			const rgbline = new THREE.Line( rgbgeometry, rgbLineMaterial );
+			RGBscene.add( rgbline );
 
 			//RGB SCENE
 			/*
