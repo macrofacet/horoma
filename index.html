@@ -463,33 +463,41 @@
 			controls_xyY.update();
 
 			const lineMaterial = new THREE.LineBasicMaterial( { color: 0xFFFFFF } );
-			const xyYpoints = [];
 			
 			var sum = [];
-			for(var i = 0; i < cmfData.high - cmfData.low; i++)
-			{
-				sum.push(cmfData.x[i] + cmfData.y[i] + cmfData.z[i]);
-			}
+			const xyzPoints = [];
 
 			for(var i = 0; i < cmfData.high - cmfData.low; i++)
 			{
-				xyYpoints.push( new THREE.Vector3(cmfData.y[i]/sum[i], cmfData.y[i], cmfData.x[i]/sum[i] ) );
+				var v = new THREE.Vector3(cmfData.x[i], cmfData.y[i], cmfData.z[i]);
+				xyzPoints.push(v);
+				sum.push(cmfData.x[i] + cmfData.y[i] + cmfData.z[i]);
+			}
+
+			const xyzLineGeometry = new THREE.BufferGeometry().setFromPoints( xyzPoints );
+			const xyzline = new THREE.Line( xyzLineGeometry, lineMaterial );
+			xyYscene.add( xyzline );
+			xyzline.visible = false;
+
+			const xyYpoints = [];
+			for(var i = 0; i < xyzPoints.length; i++)
+			{
+				xyYpoints.push( new THREE.Vector3(xyzPoints[i].y/sum[i], xyzPoints[i].y, xyzPoints[i].x/sum[i] ) );
 			}
 			const xyYLineGeometry = new THREE.BufferGeometry().setFromPoints( xyYpoints );
 			const xyYline = new THREE.Line( xyYLineGeometry, lineMaterial );
 			xyYscene.add( xyYline );
 
 			
-			const rgbLineMaterial = new THREE.LineBasicMaterial( { color: 0xFFFFFF } );
 			const rbgPoints = [];
 			const xyz_to_srgb = Utils.sRGB_to_XYZ.clone().invert();
-			for(var i = 0; i < cmfData.high - cmfData.low; i++)
+			for(var i = 0; i < xyzPoints.length; i++)
 			{
-				var v = new THREE.Vector3(cmfData.x[i], cmfData.y[i], cmfData.z[i]);
+				var v = new THREE.Vector3(xyzPoints[i].x, xyzPoints[i].y, xyzPoints[i].z);
 				rbgPoints.push(v.applyMatrix3(xyz_to_srgb));
 			}
 			const rgbgeometry = new THREE.BufferGeometry().setFromPoints( rbgPoints );
-			const rgbline = new THREE.Line( rgbgeometry, rgbLineMaterial );
+			const rgbline = new THREE.Line( rgbgeometry, lineMaterial );
 			RGBscene.add( rgbline );
 
 			//RGB SCENE
@@ -734,6 +742,9 @@
 
 				pointShaderMaterial_xyY.uniforms.renderOption.value = xySwitch ? 1 : 2;
 				material709_xyY.uniforms.renderOption.value = pointShaderMaterial_xyY.uniforms.renderOption.value;
+
+				xyzline.visible = xySwitch;
+				xyYline.visible = !xySwitch;
 
 				var lerpOptionIndex = ['raw-post', 'raw-pre', 'pre-image', 'image-post'].indexOf(params.lerpOption);
 				pointShaderMaterial_xyY.uniforms.lerpOption.value = lerpOptionIndex;
