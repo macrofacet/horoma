@@ -104,3 +104,24 @@ export const Rec2020_Space = {
 }
 
 export const Rec2020_to_XYZ = primaries_to_matrix(Rec2020_Space.red, Rec2020_Space.green, Rec2020_Space.blue, Rec2020_Space.white);
+
+export async function getCMFData() {
+  try {
+    const response = await fetch(
+      './data/cmf.json',
+      {
+        method: 'GET',
+      },
+    );
+
+    if (!response.ok) {
+      throw new Error(`Error! status: ${response.status}`);
+    }
+
+    const data = await response.json();
+
+    return data;
+  } catch (error) {
+    console.log(error);
+  }
+}

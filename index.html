@@ -281,6 +281,8 @@
 							images.loadCount += 1;
 							});
 			
+			var cmfData = await Utils.getCMFData();
+
 			var custom_texture = new THREE.DataTexture();
 
 			var aspect = 1.0;
@@ -459,6 +461,23 @@
 			controls_xyY.target.z = 0.5;
 			controls_xyY.damping = 0.2;
 			controls_xyY.update();
+
+			const material = new THREE.LineBasicMaterial( { color: 0xFFFFFF } );
+			const points = [];
+			
+			var sum = [];
+			for(var i = 0; i < cmfData.high - cmfData.low; i++)
+			{
+				sum.push(cmfData.x[i] + cmfData.y[i] + cmfData.z[i]);
+			}
+
+			for(var i = 0; i < cmfData.high - cmfData.low; i++)
+			{
+				points.push( new THREE.Vector3(cmfData.y[i]/sum[i], cmfData.y[i], cmfData.x[i]/sum[i] ) );
+			}
+			const geometry = new THREE.BufferGeometry().setFromPoints( points );
+			const line = new THREE.Line( geometry, material );
+			xyYscene.add( line );
 
 			//RGB SCENE
 			/*
